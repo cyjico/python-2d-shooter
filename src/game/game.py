@@ -4,6 +4,7 @@ from .core.settings import DEFAULT_SETTINGS
 from .core_ecs.world import World
 from .components.transform import Transform
 from .components.convex_shape import ConvexShape
+from .components.convex_collider import ConvexCollider
 from .components.player import Player
 from .components.rigid_body import RigidBody
 from .resources.camera import Camera
@@ -13,6 +14,7 @@ from .systems.rendering import render_system
 from .systems.input import input_system
 from .systems.physics import physics_system
 from .systems.player_control import player_control_system
+from .systems.collision import collision_system
 
 
 class Game:
@@ -37,19 +39,49 @@ class Game:
         self.world.add_resource(InputState())
         self.world.add_resource(EventBus())
 
-        # TODO: Remove test entities when done
-        self.world.create_entity(
+        # TODO: Remove test entities when done.
+        self.player = self.world.create_entity(
             Player(),
             RigidBody(),
-            Transform(position=pygame.Vector2(50, 50), rotation=45, scale=(1, 2)),
+            Transform(position=pygame.Vector2(0, 0), rotation=45, scale=(1, 1)),
             ConvexShape(
                 vertices=(
-                    (-15, -15),
-                    (15, -15),
-                    (15, 15),
-                    (-15, 15),
+                    pygame.Vector2(-15, -15),
+                    pygame.Vector2(15, -15),
+                    pygame.Vector2(15, 15),
+                    pygame.Vector2(-15, 15),
                 ),
                 color=(255, 0, 120),
+            ),
+            ConvexCollider(
+                vertices=(
+                    pygame.Vector2(-15, -15),
+                    pygame.Vector2(15, -15),
+                    pygame.Vector2(15, 15),
+                    pygame.Vector2(-15, 15),
+                ),
+            ),
+        )
+
+        self.world.create_entity(
+            Transform(position=pygame.Vector2(300, 100)),
+            ConvexShape(
+                vertices=(
+                    pygame.Vector2(-20, -80),
+                    pygame.Vector2(20, -80),
+                    pygame.Vector2(20, 80),
+                    pygame.Vector2(-20, 80),
+                ),
+                color=(200, 200, 200),
+            ),
+            ConvexCollider(
+                vertices=(
+                    pygame.Vector2(-20, -80),
+                    pygame.Vector2(20, -80),
+                    pygame.Vector2(20, 80),
+                    pygame.Vector2(-20, 80),
+                ),
+                bounciness=0.5,
             ),
         )
 
@@ -68,6 +100,9 @@ class Game:
         input_system(self.world)
         player_control_system(self.world, dt)
         physics_system(self.world, dt)
+        collision_system(self.world)
+
+        # Add consumers of collision events after here.
 
     def render(self):
         self.screen.fill(self.settings.background_color)
