@@ -14,7 +14,7 @@ def render_system(world: World, surface: pygame.Surface):
 
         for vertex in shape.vertices:
             screen_position = camera.world_to_screen(
-                Transform.apply(pygame.Vector2(vertex), transform)
+                transform.apply(pygame.Vector2(vertex))
             )
 
             points.append((round(screen_position.x), round(screen_position.y)))
