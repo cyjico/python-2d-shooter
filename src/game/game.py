@@ -8,6 +8,7 @@ from .components.player import Player
 from .components.rigid_body import RigidBody
 from .resources.camera import Camera
 from .resources.input_state import InputState
+from .resources.event_bus import EventBus
 from .systems.rendering import render_system
 from .systems.input import input_system
 from .systems.physics import physics_system
@@ -34,6 +35,7 @@ class Game:
         # Resources
         self.world.add_resource(Camera(self.settings.window_size))
         self.world.add_resource(InputState())
+        self.world.add_resource(EventBus())
 
         # TODO: Remove test entities when done
         self.world.create_entity(
@@ -61,10 +63,10 @@ class Game:
                 continue
 
     def update(self, dt: float):
+        self.world.get_resource(EventBus).clear()
+
         input_system(self.world)
-
         player_control_system(self.world, dt)
-
         physics_system(self.world, dt)
 
     def render(self):
