@@ -1,12 +1,14 @@
 import pygame
 
-from game.core.camera import Camera
+from game.resources.camera import Camera
 from game.core_ecs.world import World
 from game.components.transform import Transform
 from game.components.convex_shape import ConvexShape
 
 
-def render_system(world: World, surface: pygame.Surface, camera: Camera):
+def render_system(world: World, surface: pygame.Surface):
+    camera = world.get_resource(Camera)
+
     for entity, (transform, shape) in world.query(Transform, ConvexShape):
         points = []
 

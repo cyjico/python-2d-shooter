@@ -1,7 +1,7 @@
 import pygame
 
 from .core.settings import DEFAULT_SETTINGS
-from .core.camera import Camera
+from .resources.camera import Camera
 from .core_ecs.world import World
 from .components.transform import Transform
 from .components.convex_shape import ConvexShape
@@ -22,11 +22,11 @@ class Game:
         # Timing
         self.clock = pygame.time.Clock()
 
-        # Camera
-        self.camera = Camera(self.settings.window_size)
-
         # ECS
         self.world = World()
+
+        # Resources
+        self.world.add_resource(Camera(self.settings.window_size))
 
         # TODO: Remove test entities when done
         self.world.create_entity(
@@ -56,7 +56,7 @@ class Game:
     def render(self):
         self.screen.fill(self.settings.background_color)
 
-        render_system(self.world, self.screen, self.camera)
+        render_system(self.world, self.screen)
 
         pygame.display.flip()
 
