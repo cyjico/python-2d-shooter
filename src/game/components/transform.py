@@ -18,18 +18,21 @@ class Transform:
 
     def apply(self, vector: pygame.Vector2) -> pygame.Vector2:
         # NOTE:
-        # For the following comments, let v = [x, y] be a vector in R^2
+        # For the following comments, let v = [x, y] be a vector in R^2.
 
-        # Derived by multiplying the scale matrix by v
+        # Derived by multiplying the scale matrix by v.
         scaled_x = vector.x * self.scale[0]
         scaled_y = vector.y * self.scale[1]
 
-        # Derived by multiplying the rotation matrix (clockwise version) by v
-        # then adding the translation vector
+        # Derived by multiplying the rotation matrix by v then adding the
+        # translation vector.
         rot = self.rotation * (math.pi / 180.0)
         cos_rot = math.cos(rot)
         sin_rot = math.sin(rot)
+
+        # Despite the rotation matrix being counter-clockwise, pygame has it
+        # going clockwise.
         return pygame.Vector2(
-            scaled_x * cos_rot + scaled_y * sin_rot + self.position[0],
-            -scaled_x * sin_rot + scaled_y * cos_rot + self.position[1],
+            scaled_x * cos_rot - scaled_y * sin_rot + self.position[0],
+            scaled_x * sin_rot + scaled_y * cos_rot + self.position[1],
         )
