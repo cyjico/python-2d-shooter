@@ -5,7 +5,7 @@ from .core_ecs.world import World
 from .components.transform import Transform
 from .components.convex_shape import ConvexShape
 from .components.player import Player
-from .components.rigidbody import RigidBody
+from .components.rigid_body import RigidBody
 from .resources.camera import Camera
 from .resources.input_state import InputState
 from .systems.rendering import render_system
