@@ -10,13 +10,8 @@ def render_system(world: World, surface: pygame.Surface):
     camera = world.get_resource(Camera)
 
     for entity, (transform, shape) in world.query(Transform, ConvexShape):
-        points = []
-
-        for vertex in shape.vertices:
-            screen_position = camera.world_to_screen(
-                transform.apply(pygame.Vector2(vertex))
-            )
-
-            points.append((round(screen_position.x), round(screen_position.y)))
-
-        pygame.draw.polygon(surface, shape.color, points)
+        pygame.draw.polygon(
+            surface,
+            shape.color,
+            [camera.world_to_screen(v) for v in transform.apply_all(shape.vertices)],
+        )
