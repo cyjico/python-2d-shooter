@@ -1,11 +1,17 @@
 import pygame
 
 from .core.settings import DEFAULT_SETTINGS
-from .resources.camera import Camera
 from .core_ecs.world import World
 from .components.transform import Transform
 from .components.convex_shape import ConvexShape
+from .components.player import Player
+from .components.rigidbody import RigidBody
+from .resources.camera import Camera
+from .resources.input_state import InputState
 from .systems.rendering import render_system
+from .systems.input import input_system
+from .systems.physics import physics_system
+from .systems.player_control import player_control_system
 
 
 class Game:
@@ -27,10 +33,13 @@ class Game:
 
         # Resources
         self.world.add_resource(Camera(self.settings.window_size))
+        self.world.add_resource(InputState())
 
         # TODO: Remove test entities when done
         self.world.create_entity(
-            Transform(position=(50, 50), rotation=45, scale=(1, 2)),
+            Player(),
+            RigidBody(),
+            Transform(position=pygame.Vector2(50, 50), rotation=45, scale=(1, 2)),
             ConvexShape(
                 vertices=(
                     (-15, -15),
@@ -49,9 +58,14 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+                continue
 
     def update(self, dt: float):
-        pass
+        input_system(self.world)
+
+        player_control_system(self.world, dt)
+
+        physics_system(self.world, dt)
 
     def render(self):
         self.screen.fill(self.settings.background_color)
