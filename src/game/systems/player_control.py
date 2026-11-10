@@ -1,7 +1,7 @@
 from ..core_ecs.world import World
 from ..resources.input_state import InputState
 from ..components.player import Player
-from ..components.rigidbody import RigidBody
+from ..components.rigid_body import RigidBody
 
 
 def player_control_system(world: World, dt: float):

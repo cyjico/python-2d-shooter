@@ -55,6 +55,14 @@ class World:
     def has_component[C](self, entity: Entity, component_type: type[C]) -> bool:
         return entity in self._components.get(component_type, {})
 
+    def try_get_component[C](self, entity: Entity, component_type: type[C]) -> C | None:
+        pool = self._components.get(component_type)
+
+        if pool is None or entity not in pool:
+            return None
+
+        return cast(C, pool[entity])
+
     @overload
     def query[C1](self, c1: type[C1], /) -> Iterator[tuple[Entity, tuple[C1]]]: ...
 

@@ -17,6 +17,19 @@ class RigidBody:
     accumulated_impulse: pygame.Vector2 = field(default_factory=pygame.Vector2)
     """Force applied over a short period of time (e.g. explosions, collisions)."""
 
+    @property
+    def inverse_mass(self) -> float:
+        """Inverse mass is a measure of how easily an object responds to force.
+
+        Returns:
+            float: If mass is zero, returns 0; else 1 / mass.
+        """
+
+        if self.mass == 0:
+            return 0.0
+
+        return 1.0 / self.mass
+
     def apply_force(self, force: pygame.Vector2):
         self.accumulated_force += force
 
