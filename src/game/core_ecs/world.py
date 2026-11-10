@@ -7,11 +7,11 @@ from .entity import Entity
 class World:
     def __init__(self):
         self._next_entity = 0
-
         self._entities: set[Entity] = set()
-
         self._components: dict[type, dict[Entity, object]] = {}
-        """component type -> [entity id -> component instance]"""
+        """`component type` -> [`entity id` -> `component instance`]."""
+
+        self._resources: dict[type, object] = {}
 
     def create_entity(self, *components) -> Entity:
         entity = self._next_entity
@@ -96,3 +96,12 @@ class World:
                 components.append(pool[entity])
             else:
                 yield entity, tuple(components)
+
+    def add_resource(self, resource) -> None:
+        self._resources[type(resource)] = resource
+
+    def get_resource[T](self, resource_type: type[T]) -> T:
+        try:
+            return cast(T, self._resources[resource_type])
+        except KeyError:
+            raise KeyError(f"Resource {resource_type.__name__} not found")
