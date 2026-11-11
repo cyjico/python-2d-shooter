@@ -9,7 +9,7 @@ class Transform:
     position: pygame.Vector2 = field(default_factory=pygame.Vector2)
     """World position of the entity."""
     rotation: float = 0.0
-    """Rotation in degrees, clockwise."""
+    """Rotation in radians, clockwise."""
     scale: tuple[float, float] = (1.0, 1.0)
     """Scale factors along the x and y axes."""
 
@@ -26,9 +26,8 @@ class Transform:
 
         # Derived by multiplying the rotation matrix by v then adding the
         # translation vector.
-        rot = self.rotation * (math.pi / 180.0)
-        cos_rot = math.cos(rot)
-        sin_rot = math.sin(rot)
+        cos_rot = math.cos(self.rotation)
+        sin_rot = math.sin(self.rotation)
 
         # Despite the rotation matrix being counter-clockwise, pygame has it
         # going clockwise.

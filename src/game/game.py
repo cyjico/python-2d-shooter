@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 from .core.settings import DEFAULT_SETTINGS
@@ -6,7 +8,7 @@ from .components.transform import Transform
 from .components.convex_shape import ConvexShape
 from .components.convex_collider import ConvexCollider
 from .components.player import Player
-from .components.rigid_body import RigidBody
+from .components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from .resources.camera import Camera
 from .resources.input_state import InputState
 from .resources.event_bus import EventBus
@@ -42,8 +44,10 @@ class Game:
         # TODO: Remove test entities when done.
         self.player = self.world.create_entity(
             Player(),
-            RigidBody(),
-            Transform(position=pygame.Vector2(0, 0), rotation=45, scale=(1, 1)),
+            RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
+            Transform(
+                position=pygame.Vector2(0, 0), rotation=math.radians(45), scale=(1, 1)
+            ),
             ConvexShape(
                 vertices=(
                     pygame.Vector2(-15, -15),
@@ -63,24 +67,27 @@ class Game:
             ),
         )
 
+        test_width, test_height = 40, 160
+        test_vertices = (
+            pygame.Vector2(-test_width / 2, -test_height / 2),
+            pygame.Vector2(test_width / 2, -test_height / 2),
+            pygame.Vector2(test_width / 2, test_height / 2),
+            pygame.Vector2(-test_width / 2, test_height / 2),
+        )
+        test_mass = mass_of_box(0.2, test_width, test_height)
         self.world.create_entity(
+            RigidBody(
+                mass=test_mass,
+                inertia=inertia_of_box(test_mass, test_width, test_height),
+                center_of_mass=pygame.Vector2(0, 0),
+            ),
             Transform(position=pygame.Vector2(300, 100)),
             ConvexShape(
-                vertices=(
-                    pygame.Vector2(-20, -80),
-                    pygame.Vector2(20, -80),
-                    pygame.Vector2(20, 80),
-                    pygame.Vector2(-20, 80),
-                ),
+                vertices=test_vertices,
                 color=(200, 200, 200),
             ),
             ConvexCollider(
-                vertices=(
-                    pygame.Vector2(-20, -80),
-                    pygame.Vector2(20, -80),
-                    pygame.Vector2(20, 80),
-                    pygame.Vector2(-20, 80),
-                ),
+                vertices=test_vertices,
                 bounciness=0.5,
             ),
         )
