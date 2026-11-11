@@ -15,13 +15,14 @@ def input_system(world: World):
         int(keys[pygame.K_d]) - int(keys[pygame.K_a]),
         int(keys[pygame.K_s]) - int(keys[pygame.K_w]),
     )
-
-    # Convert to unit vector to prevent faster diagonal movement
     if movement.length_squared() > 0:
         movement = movement.normalize()
 
     inputs.movement = movement
 
     # Mouse
-    inputs.aim_position = pygame.Vector2(pygame.mouse.get_pos())
+    inputs.mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
+    was_down = inputs.primary_down
     inputs.primary_down = pygame.mouse.get_pressed()[0]
+    inputs.primary_pressed = inputs.primary_down and not was_down
+    inputs.primary_released = was_down and not inputs.primary_down
