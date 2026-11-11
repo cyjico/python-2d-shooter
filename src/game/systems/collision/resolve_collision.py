@@ -5,10 +5,10 @@ from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from .contact_point import find_contact_point
 
 BOUNCE_THRESHOLD = 20.0
 """Impacts slower than this (px/s) don't bounce, which stops resting contacts from jittering."""
-
 
 def resolve_collision(
     world: World,
@@ -23,36 +23,63 @@ def resolve_collision(
     body_a = world.try_get_component(entity_a, RigidBody)
     body_b = world.try_get_component(entity_b, RigidBody)
 
-    inv_a = body_a is not None and body_a.inverse_mass or 0.0
-    inv_b = body_b is not None and body_b.inverse_mass or 0.0
-    total = inv_a + inv_b
+    inv_m_a = body_a.inverse_mass if body_a is not None else 0.0
+    inv_m_b = body_b.inverse_mass if body_b is not None else 0.0
+    total_inv_m = inv_m_a + inv_m_b
 
-    if total == 0:
+    if total_inv_m == 0:
         return
 
-    # Positional correction: heavier objects move less, static ones don't move.
-    transform_a.position -= normal * depth * (inv_a / total)
-    transform_b.position += normal * depth * (inv_b / total)
+    contact = find_contact_point(
+        transform_a.apply_all(collider_a.vertices),
+        transform_b.apply_all(collider_b.vertices),
+        normal,
+    )
 
-    # How fast B moves relative to A along the normal.
-    approach_speed = (
-        (body_b.linear_velocity if body_b and inv_b > 0 else pygame.Vector2())
-        - (body_a.linear_velocity if body_a and inv_a > 0 else pygame.Vector2())
-    ).dot(normal)
+    lr_a = contact - transform_a.position
+    lr_b = contact - transform_b.position
 
-    # If `approach_speed` >= 0 then B is already separating.
-    if approach_speed >= 0:
+    # Positional correction.
+    transform_a.position -= normal * depth * (inv_m_a / total_inv_m)
+    transform_b.position += normal * depth * (inv_m_b / total_inv_m)
+
+    # Relative velocity at the contact point.
+    vel_a = (
+        RigidBody.velocity_at(lr_a, body_a)
+        if body_a and inv_m_a > 0
+        else pygame.Vector2()
+    )
+    vel_b = (
+        RigidBody.velocity_at(lr_b, body_b)
+        if body_b and inv_m_b > 0
+        else pygame.Vector2()
+    )
+    relative = vel_b - vel_a
+
+    # approach being negative means B is going opposite of the normal.
+    approach = relative.dot(normal)
+    if approach >= 0:
         return
-    approach_speed = -approach_speed
 
     bounciness = max(collider_a.bounciness, collider_b.bounciness)
-    if approach_speed < BOUNCE_THRESHOLD:
+    if -approach < BOUNCE_THRESHOLD:
         bounciness = 0.0
 
-    impulse = (1.0 + bounciness) * approach_speed / total
+    inv_eff_a = (
+        body_a.inverse_effective_resistance(lr_a, normal)
+        if body_a and inv_m_a > 0
+        else 0.0
+    )
+    inv_eff_b = (
+        body_b.inverse_effective_resistance(lr_b, normal)
+        if body_b and inv_m_b > 0
+        else 0.0
+    )
 
-    if body_a is not None and inv_a > 0:
-        body_a.apply_impulse(-normal * impulse * inv_a)
+    j = (1.0 + bounciness) * -approach * (1 / (inv_eff_a + inv_eff_b))
 
-    if body_b is not None and inv_b > 0:
-        body_b.apply_impulse(normal * impulse * inv_b)
+    if body_a is not None and inv_m_a > 0:
+        body_a.apply_impulse_at(lr_a, -normal * j)
+
+    if body_b is not None and inv_m_b > 0:
+        body_b.apply_impulse_at(lr_b, normal * j)

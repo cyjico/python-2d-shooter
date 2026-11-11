@@ -11,18 +11,23 @@ def physics_system(world: World, dt: float):
             rigidbody.clear_accumulators()
             continue
 
-        # Apply force, acceleration, and impulse.
+        # Apply force, acceleration, and impulse. Then, apply drag.
         rigidbody.linear_velocity += (
-            rigidbody.accumulated_force / rigidbody.mass
+            rigidbody.accumulated_force * rigidbody.inverse_mass
             + rigidbody.accumulated_acceleration
-        ) * dt + rigidbody.accumulated_impulse / rigidbody.mass
+        ) * dt + rigidbody.accumulated_impulse * rigidbody.inverse_mass
+        rigidbody.linear_velocity *= max(0.0, 1.0 - rigidbody.drag * dt)
 
-        # Apply drag.
-        drag_factor = max(0.0, 1.0 - rigidbody.drag * dt)
-        rigidbody.linear_velocity *= drag_factor
+        # Same idea as above but angular.
+        rigidbody.angular_velocity += (
+            rigidbody.accumulated_torque * rigidbody.inverse_inertia
+            + rigidbody.accumulated_angular_acceleration
+        ) * dt + rigidbody.accumulated_angular_impulse * rigidbody.inverse_inertia
+        rigidbody.angular_velocity *= max(0.0, 1.0 - rigidbody.angular_drag * dt)
 
-        # Update position.
+        # Update position and rotation.
         transform.position += rigidbody.linear_velocity * dt
+        transform.rotation += rigidbody.angular_velocity * dt
 
         # Clear accumulated values.
         rigidbody.clear_accumulators()

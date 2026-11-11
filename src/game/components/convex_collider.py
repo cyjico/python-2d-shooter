@@ -6,14 +6,15 @@ import pygame
 class ConvexCollider:
     vertices: tuple[pygame.Vector2, ...]
     """Local to the entity's transform."""
-    is_trigger: bool = False
-    """Triggers report collisions but are never pushed apart."""
+
     bounciness: float = 0.2
     """0 = no bounce, 1 = perfectly elastic. The higher of the two colliders is used."""
 
+    is_trigger: bool = False
+    """Triggers report collisions but are never pushed apart."""
+
     laabb: tuple[pygame.Vector2, pygame.Vector2] = field(init=False)
     """Local to the entity's transform (local axis-aligned bounding box)."""
-
     centroid: pygame.Vector2 = field(init=False)
     """Local to the entity's transform. The average of the bounds."""
 

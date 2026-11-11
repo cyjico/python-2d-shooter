@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 from .core.settings import DEFAULT_SETTINGS
@@ -6,7 +8,7 @@ from .components.transform import Transform
 from .components.convex_shape import ConvexShape
 from .components.convex_collider import ConvexCollider
 from .components.player import Player
-from .components.rigid_body import RigidBody
+from .components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from .resources.camera import Camera
 from .resources.input_state import InputState
 from .resources.event_bus import EventBus
@@ -42,8 +44,10 @@ class Game:
         # TODO: Remove test entities when done.
         self.player = self.world.create_entity(
             Player(),
-            RigidBody(),
-            Transform(position=pygame.Vector2(0, 0), rotation=45, scale=(1, 1)),
+            RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
+            Transform(
+                position=pygame.Vector2(0, 0), rotation=math.radians(45), scale=(1, 1)
+            ),
             ConvexShape(
                 vertices=(
                     pygame.Vector2(-15, -15),
@@ -63,7 +67,9 @@ class Game:
             ),
         )
 
+        test_mass = mass_of_box(0.2, 300, 100)
         self.world.create_entity(
+            RigidBody(mass=test_mass, inertia=inertia_of_box(test_mass, 300, 100)),
             Transform(position=pygame.Vector2(300, 100)),
             ConvexShape(
                 vertices=(
