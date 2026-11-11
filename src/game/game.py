@@ -24,7 +24,8 @@ from game.systems.collision import collision_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
-
+from game.components.camera_target import CameraTarget
+from game.systems.camera_follow import camera_follow_system
 
 class Game:
     def __init__(self):
@@ -53,6 +54,7 @@ class Game:
         # TODO: Remove test entities when done.
         self.player = self.world.create_entity(
             Player(),
+            CameraTarget(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(
                 position=pygame.Vector2(0, 0), rotation=math.radians(45), scale=(1, 1)
@@ -77,6 +79,8 @@ class Game:
                 ),
             ),
         )
+
+        self.world.get_resource(Camera).center_on(pygame.Vector2(0, 0))
 
         test_width, test_height = 40, 160
         test_vertices = (
@@ -123,8 +127,7 @@ class Game:
         player_control_system(self.world, dt)
         physics_system(self.world, dt)
         collision_system(self.world)
-
-        # Add consumers of collision events after here.
+        camera_follow_system(self.world, dt)
 
     def render(self):
         self.screen.fill(self.settings.background_color)
