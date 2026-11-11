@@ -13,7 +13,7 @@ def camera_follow_system(world: World, dt: float):
         goal = transform.position - camera.viewport_size / 2
 
         # Reminder that lim x->inf e^-x = 0.
-        t = 1.0 - math.exp(-target.smoothing * dt)
+        t = 1.0 - math.exp(-max(0.0, target.smoothing) * dt)
         camera.position = camera.position.lerp(goal, t)
         # Only one target is followed.
         break
