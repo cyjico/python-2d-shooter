@@ -6,7 +6,7 @@ from game.components.transform import Transform
 def get_aabb(
     transform: Transform,
     laabb: tuple[pygame.Vector2, pygame.Vector2],
-) -> tuple[float, float, float, float]:
+):
     obb = transform.apply_all(
         [
             laabb[0],

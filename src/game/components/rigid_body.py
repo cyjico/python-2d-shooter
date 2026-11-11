@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 import pygame
 
+
 @dataclass(slots=True, kw_only=True)
 class RigidBody:
     mass: float = 1.0
@@ -76,7 +77,7 @@ class RigidBody:
 
     def apply_angular_impulse(self, impulse: float):
         self.accumulated_angular_impulse += impulse
-        
+
     def apply_impulse_at(self, p: pygame.Vector2, impulse: pygame.Vector2):
         self.apply_impulse(impulse)
 

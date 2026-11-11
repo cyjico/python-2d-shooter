@@ -18,7 +18,7 @@ def _get_edge_normals(points: Sequence[pygame.Vector2]) -> Iterator[pygame.Vecto
 
 def _project_all(
     points: Sequence[pygame.Vector2], axis: pygame.Vector2
-) -> tuple[float, float]:
+):
     dots = [point.dot(axis) for point in points]
     return min(dots), max(dots)
 
@@ -28,7 +28,7 @@ def test_sat(
     centroid_a: pygame.Vector2,
     points_b: Sequence[pygame.Vector2],
     centroid_b: pygame.Vector2,
-) -> tuple[pygame.Vector2, float] | None:
+):
     """
     Separating Axis Theorem test between two convex polygons in world space.
 

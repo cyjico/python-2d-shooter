@@ -6,7 +6,7 @@ def find_contact_point(
     points_b: list[pygame.Vector2],
     normal: pygame.Vector2,
     tolerance=1.0,
-) -> pygame.Vector2:
+):
     """Approximate contact point between two overlapping convex polygons.
 
     `normal` points from A to B. Takes the vertices of each shape that lie

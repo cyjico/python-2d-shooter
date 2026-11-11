@@ -13,10 +13,10 @@ class Transform:
     scale: tuple[float, float] = (1.0, 1.0)
     """Scale factors along the x and y axes."""
 
-    def apply_all(self, vectors: Sequence[pygame.Vector2]) -> list[pygame.Vector2]:
+    def apply_all(self, vectors: Sequence[pygame.Vector2]):
         return [self.apply(v) for v in vectors]
 
-    def apply(self, vector: pygame.Vector2) -> pygame.Vector2:
+    def apply(self, vector: pygame.Vector2):
         # NOTE:
         # For the following comments, let v = [x, y] be a vector in R^2.
 

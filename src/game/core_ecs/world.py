@@ -52,7 +52,7 @@ class World:
     def get_component[C](self, entity: Entity, component_type: type[C]) -> C:
         return cast(C, self._components[component_type][entity])
 
-    def has_component[C](self, entity: Entity, component_type: type[C]) -> bool:
+    def has_component[C](self, entity: Entity, component_type: type[C]):
         return entity in self._components.get(component_type, {})
 
     def try_get_component[C](self, entity: Entity, component_type: type[C]) -> C | None:
@@ -105,7 +105,7 @@ class World:
             else:
                 yield entity, tuple(components)
 
-    def add_resource(self, resource) -> None:
+    def add_resource(self, resource):
         self._resources[type(resource)] = resource
 
     def get_resource[T](self, resource_type: type[T]) -> T:

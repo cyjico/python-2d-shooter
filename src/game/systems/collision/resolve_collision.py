@@ -11,7 +11,7 @@ BOUNCE_THRESHOLD = 20.0
 """Impacts slower than this (px/s) don't bounce, which stops resting contacts from jittering."""
 
 
-def _center_of_mass(transform: Transform, body: RigidBody | None) -> pygame.Vector2:
+def _center_of_mass(transform: Transform, body: RigidBody | None):
     if body is None:
         return pygame.Vector2(transform.position)
 
