@@ -2,15 +2,17 @@ from dataclasses import dataclass, field
 
 import pygame
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, kw_only=True)
 class RigidBody:
     mass: float = 1.0
-    drag: float = 1.0
+    drag: float = 0.0
 
     inertia: float = 0.0
     """Informally known as 'angular mass'."""
-    angular_drag: float = 2.0
+    angular_drag: float = 0.0
+
+    center_of_mass: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    """Local to the entity's transform."""
 
     linear_velocity: pygame.Vector2 = field(default_factory=pygame.Vector2)
     angular_velocity: float = 0.0
@@ -36,7 +38,7 @@ class RigidBody:
         """Inverse inertia is a measure of how easily an object can be spun.
 
         Returns:
-            float: If inertia is zero, returns 0; else 1 / mass.
+            float: If inertia is zero, returns 0; else 1 / inertia.
         """
         return 0.0 if self.inertia == 0 else 1.0 / self.inertia
 
@@ -49,16 +51,15 @@ class RigidBody:
         """
         return 0.0 if self.mass == 0 else 1.0 / self.mass
 
-    @staticmethod
-    def velocity_at(p: pygame.Vector2, rb: RigidBody):
-        """Velocity of a point `p` away from the center: linear + spin."""
-        # [-r.y, r.x] is perpendicular to p.
-        return rb.linear_velocity + rb.angular_velocity * pygame.Vector2(-p.y, p.x)
+    def velocity_at(self, p: pygame.Vector2):
+        """Velocity of a point offset by `p` from the center of mass: linear + spin."""
+        # [-p.y, p.x] is perpendicular to p.
+        return self.linear_velocity + self.angular_velocity * pygame.Vector2(-p.y, p.x)
 
     def inverse_effective_resistance(
         self, p: pygame.Vector2, direction: pygame.Vector2
     ):
-        """How easily a push at `r` along `direction` changes this body's motion."""
+        """How easily a push at `p` along `direction` changes this body's motion."""
 
         # p.cross(direction) being positive => direction is clockwise from p.
         # p.cross(direction) being negative => direction is counterclockwise from p.
@@ -73,6 +74,9 @@ class RigidBody:
     def apply_impulse(self, impulse: pygame.Vector2):
         self.accumulated_impulse += impulse
 
+    def apply_angular_impulse(self, impulse: float):
+        self.accumulated_angular_impulse += impulse
+        
     def apply_impulse_at(self, p: pygame.Vector2, impulse: pygame.Vector2):
         self.apply_impulse(impulse)
 
@@ -80,8 +84,11 @@ class RigidBody:
         # p.cross(impulse) being negative => impulse is counterclockwise from p.
         self.apply_angular_impulse(p.cross(impulse))
 
-    def apply_angular_impulse(self, impulse: float):
-        self.accumulated_angular_impulse += impulse
+    def apply_instant_impulse_at(self, p: pygame.Vector2, impulse: pygame.Vector2):
+        """Change velocity right now instead of queueing, so that later contacts
+        in the same collision pass see the result."""
+        self.linear_velocity += impulse * self.inverse_mass
+        self.angular_velocity += p.cross(impulse) * self.inverse_inertia
 
     def clear_accumulators(self):
         self.accumulated_force.update(0, 0)
@@ -93,7 +100,8 @@ class RigidBody:
 
 
 def mass_of_box(density: float, width: float, height: float):
-    return density * width * height / 12**2
+    """Mass of a solid rectangle."""
+    return density * width * height / 12
 
 
 def inertia_of_box(mass: float, width: float, height: float):

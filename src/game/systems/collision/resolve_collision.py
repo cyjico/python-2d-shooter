@@ -10,6 +10,14 @@ from .contact_point import find_contact_point
 BOUNCE_THRESHOLD = 20.0
 """Impacts slower than this (px/s) don't bounce, which stops resting contacts from jittering."""
 
+
+def _center_of_mass(transform: Transform, body: RigidBody | None) -> pygame.Vector2:
+    if body is None:
+        return pygame.Vector2(transform.position)
+
+    return transform.apply(body.center_of_mass)
+
+
 def resolve_collision(
     world: World,
     a: tuple[Entity, Transform, ConvexCollider],
@@ -36,24 +44,17 @@ def resolve_collision(
         normal,
     )
 
-    lr_a = contact - transform_a.position
-    lr_b = contact - transform_b.position
+    # Lever arms are measured from each body's center of mass.
+    lr_a = contact - _center_of_mass(transform_a, body_a)
+    lr_b = contact - _center_of_mass(transform_b, body_b)
 
     # Positional correction.
     transform_a.position -= normal * depth * (inv_m_a / total_inv_m)
     transform_b.position += normal * depth * (inv_m_b / total_inv_m)
 
     # Relative velocity at the contact point.
-    vel_a = (
-        RigidBody.velocity_at(lr_a, body_a)
-        if body_a and inv_m_a > 0
-        else pygame.Vector2()
-    )
-    vel_b = (
-        RigidBody.velocity_at(lr_b, body_b)
-        if body_b and inv_m_b > 0
-        else pygame.Vector2()
-    )
+    vel_a = body_a.velocity_at(lr_a) if body_a and inv_m_a > 0 else pygame.Vector2()
+    vel_b = body_b.velocity_at(lr_b) if body_b and inv_m_b > 0 else pygame.Vector2()
     relative = vel_b - vel_a
 
     # approach being negative means B is going opposite of the normal.
@@ -76,10 +77,11 @@ def resolve_collision(
         else 0.0
     )
 
-    j = (1.0 + bounciness) * -approach * (1 / (inv_eff_a + inv_eff_b))
+    j = (1.0 + bounciness) * -approach / (inv_eff_a + inv_eff_b)
 
+    # Applied immediately so later contacts this frame see the updated velocity.
     if body_a is not None and inv_m_a > 0:
-        body_a.apply_impulse_at(lr_a, -normal * j)
+        body_a.apply_instant_impulse_at(lr_a, -normal * j)
 
     if body_b is not None and inv_m_b > 0:
-        body_b.apply_impulse_at(lr_b, normal * j)
+        body_b.apply_instant_impulse_at(lr_b, normal * j)
