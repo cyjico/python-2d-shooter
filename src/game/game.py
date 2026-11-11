@@ -27,6 +27,7 @@ from game.systems.ui.render import ui_render_system
 from game.components.camera_target import CameraTarget
 from game.systems.camera_follow import camera_follow_system
 
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -124,10 +125,12 @@ class Game:
         input_system(self.world, self.events)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
+
+        camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
+
         physics_system(self.world, dt)
         collision_system(self.world)
-        camera_follow_system(self.world, dt)
 
     def render(self):
         self.screen.fill(self.settings.background_color)
