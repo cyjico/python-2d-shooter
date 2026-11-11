@@ -102,6 +102,7 @@ class RigidBody:
 
 def mass_of_box(density: float, width: float, height: float):
     """Mass of a solid rectangle."""
+    # Dividing by 12 is a random magic number that felt nice.
     return density * width * height / 12
 
 
