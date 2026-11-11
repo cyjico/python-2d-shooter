@@ -67,26 +67,27 @@ class Game:
             ),
         )
 
-        test_mass = mass_of_box(0.2, 300, 100)
+        test_width, test_height = 40, 160
+        test_vertices = (
+            pygame.Vector2(-test_width / 2, -test_height / 2),
+            pygame.Vector2(test_width / 2, -test_height / 2),
+            pygame.Vector2(test_width / 2, test_height / 2),
+            pygame.Vector2(-test_width / 2, test_height / 2),
+        )
+        test_mass = mass_of_box(0.2, test_width, test_height)
         self.world.create_entity(
-            RigidBody(mass=test_mass, inertia=inertia_of_box(test_mass, 300, 100)),
+            RigidBody(
+                mass=test_mass,
+                inertia=inertia_of_box(test_mass, test_width, test_height),
+                center_of_mass=pygame.Vector2(0, 0),
+            ),
             Transform(position=pygame.Vector2(300, 100)),
             ConvexShape(
-                vertices=(
-                    pygame.Vector2(-20, -80),
-                    pygame.Vector2(20, -80),
-                    pygame.Vector2(20, 80),
-                    pygame.Vector2(-20, 80),
-                ),
+                vertices=test_vertices,
                 color=(200, 200, 200),
             ),
             ConvexCollider(
-                vertices=(
-                    pygame.Vector2(-20, -80),
-                    pygame.Vector2(20, -80),
-                    pygame.Vector2(20, 80),
-                    pygame.Vector2(-20, 80),
-                ),
+                vertices=test_vertices,
                 bounciness=0.5,
             ),
         )
