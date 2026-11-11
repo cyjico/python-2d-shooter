@@ -5,7 +5,7 @@ import pygame
 from .core.settings import DEFAULT_SETTINGS
 from .core_ecs.world import World
 from .components.transform import Transform
-from .components.convex_shape import ConvexShape
+from .components.shape import Shape
 from .components.convex_collider import ConvexCollider
 from .components.player import Player
 from .components.rigid_body import RigidBody, inertia_of_box, mass_of_box
@@ -48,7 +48,7 @@ class Game:
             Transform(
                 position=pygame.Vector2(0, 0), rotation=math.radians(45), scale=(1, 1)
             ),
-            ConvexShape(
+            Shape(
                 vertices=(
                     pygame.Vector2(-15, -15),
                     pygame.Vector2(15, -15),
@@ -82,7 +82,7 @@ class Game:
                 center_of_mass=pygame.Vector2(0, 0),
             ),
             Transform(position=pygame.Vector2(300, 100)),
-            ConvexShape(
+            Shape(
                 vertices=test_vertices,
                 color=(200, 200, 200),
             ),

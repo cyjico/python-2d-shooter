@@ -3,7 +3,7 @@ import pygame
 
 
 @dataclass(slots=True)
-class ConvexShape:
+class Shape:
     vertices: tuple[pygame.Vector2, ...]
     """Local to the entity's transform."""
     color: tuple[int, int, int] = (80, 200, 120)
