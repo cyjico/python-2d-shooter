@@ -9,7 +9,14 @@ from game.components.shape import Shape
 def render_system(world: World, surface: pygame.Surface):
     camera = world.get_resource(Camera)
 
-    for entity, (transform, shape) in world.query(Transform, Shape):
+    for entity, (shape,) in world.query(Shape):
+        transform = world.get_component(entity, Transform)
+
+        radius = shape.radius * max(abs(transform.scale[0]), abs(transform.scale[1]))
+
+        if not camera.is_circle_visible(transform.position, radius):
+            continue
+
         pygame.draw.polygon(
             surface,
             shape.color,

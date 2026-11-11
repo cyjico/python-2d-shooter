@@ -15,3 +15,12 @@ class Camera:
 
     def center_on(self, target: pygame.Vector2):
         self.position = pygame.Vector2(target) - self.viewport_size / 2
+    
+    def is_circle_visible(self, center: pygame.Vector2, radius: float) -> bool:
+        sx = center.x - self.position.x
+        sy = center.y - self.position.y
+        w, h = self.viewport_size
+        return (
+            sx + radius >= 0 and sx - radius <= w
+            and sy + radius >= 0 and sy - radius <= h
+        )

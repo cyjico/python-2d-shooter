@@ -14,9 +14,9 @@ class ConvexCollider:
     """Triggers report collisions but are never pushed apart."""
 
     laabb: tuple[pygame.Vector2, pygame.Vector2] = field(init=False)
-    """Local to the entity's transform (local axis-aligned bounding box)."""
+    """Local to the entity's transform (local axis-aligned bounding box). Computed once."""
     centroid: pygame.Vector2 = field(init=False)
-    """Local to the entity's transform. The average of the bounds."""
+    """Local to the entity's transform. The average of the bounds. Computed once."""
 
     def __post_init__(self):
         xs = [v[0] for v in self.vertices]
