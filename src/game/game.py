@@ -60,8 +60,9 @@ class Game:
             Shape(
                 vertices=(
                     pygame.Vector2(-15, -15),
-                    pygame.Vector2(15, -15),
-                    pygame.Vector2(15, 15),
+                    pygame.Vector2(10, -15),
+                    pygame.Vector2(22, 0),
+                    pygame.Vector2(10, 15),
                     pygame.Vector2(-15, 15),
                 ),
                 color=(255, 0, 120),
@@ -70,6 +71,7 @@ class Game:
                 vertices=(
                     pygame.Vector2(-15, -15),
                     pygame.Vector2(15, -15),
+                    pygame.Vector2(22, 0),
                     pygame.Vector2(15, 15),
                     pygame.Vector2(-15, 15),
                 ),
@@ -104,7 +106,6 @@ class Game:
         # Game state
         self.running = True
         self.events: list[pygame.event.Event] = []
-
 
     def handle_events(self):
         self.events = pygame.event.get()
