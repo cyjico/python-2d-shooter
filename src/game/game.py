@@ -103,8 +103,11 @@ class Game:
 
         # Game state
         self.running = True
+        self.events: list[pygame.event.Event] = []
+
 
     def handle_events(self):
+        self.events = pygame.event.get()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -113,7 +116,7 @@ class Game:
     def update(self, dt: float):
         self.world.get_resource(EventBus).clear()
 
-        input_system(self.world)
+        input_system(self.world, self.events)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
         player_control_system(self.world, dt)
