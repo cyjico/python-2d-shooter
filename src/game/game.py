@@ -2,21 +2,28 @@ import math
 
 import pygame
 
-from .core.settings import DEFAULT_SETTINGS
-from .core_ecs.world import World
-from .components.transform import Transform
-from .components.shape import Shape
-from .components.convex_collider import ConvexCollider
-from .components.player import Player
-from .components.rigid_body import RigidBody, inertia_of_box, mass_of_box
-from .resources.camera import Camera
-from .resources.input_state import InputState
-from .resources.event_bus import EventBus
-from .systems.rendering import render_system
-from .systems.input import input_system
-from .systems.physics import physics_system
-from .systems.player_control import player_control_system
-from .systems.collision import collision_system
+from game.components.ui import UIButton, UILabel, UIRect
+from game.core.settings import DEFAULT_SETTINGS
+from game.core_ecs.world import World
+from game.components.transform import Transform
+from game.components.shape import Shape
+from game.components.convex_collider import ConvexCollider
+from game.components.player import Player
+from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
+from game.events.ui import ButtonClicked
+from game.resources.ui_state import UIState
+from game.resources.asset_store import AssetStore, Path
+from game.resources.camera import Camera
+from game.resources.input_state import InputState
+from game.resources.event_bus import EventBus
+from game.systems.rendering import render_system
+from game.systems.input import input_system
+from game.systems.physics import physics_system
+from game.systems.player_control import player_control_system
+from game.systems.collision import collision_system
+from game.systems.ui.interaction import ui_interaction_system
+from game.systems.ui.layout import ui_layout_system
+from game.systems.ui.render import ui_render_system
 
 
 class Game:
@@ -40,6 +47,8 @@ class Game:
         self.world.add_resource(Camera(self.settings.window_size))
         self.world.add_resource(InputState())
         self.world.add_resource(EventBus())
+        self.world.add_resource(AssetStore(Path(__file__).parent / "assets"))
+        self.world.add_resource(UIState())
 
         # TODO: Remove test entities when done.
         self.player = self.world.create_entity(
@@ -94,8 +103,11 @@ class Game:
 
         # Game state
         self.running = True
+        self.events: list[pygame.event.Event] = []
+
 
     def handle_events(self):
+        self.events = pygame.event.get()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -104,7 +116,9 @@ class Game:
     def update(self, dt: float):
         self.world.get_resource(EventBus).clear()
 
-        input_system(self.world)
+        input_system(self.world, self.events)
+        ui_layout_system(self.world)
+        ui_interaction_system(self.world)
         player_control_system(self.world, dt)
         physics_system(self.world, dt)
         collision_system(self.world)
@@ -115,6 +129,7 @@ class Game:
         self.screen.fill(self.settings.background_color)
 
         render_system(self.world, self.screen)
+        ui_render_system(self.world, self.screen)
 
         pygame.display.flip()
 
