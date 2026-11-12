@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pygame
 
-from game.core_ecs.world import World
-from game.components.transform import Transform
-from game.components.shape import Shape
 from game.components.convex_collider import ConvexCollider
 from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
+from game.components.shape import Shape
+from game.components.transform import Transform
+from game.core_ecs.world import World
 
 TILE_SIZE = 40
 """Width and height of one map character, in pixels."""

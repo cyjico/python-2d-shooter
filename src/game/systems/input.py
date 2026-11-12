@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+
 import pygame
 
 from game.core_ecs.world import World

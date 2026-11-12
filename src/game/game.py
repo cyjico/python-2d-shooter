@@ -2,40 +2,40 @@ import math
 
 import pygame
 
+from game.components.camera_target import CameraTarget
+from game.components.convex_collider import ConvexCollider
 from game.components.hud import WeaponStatusLabel
 from game.components.loadout import Gun, Loadout
+from game.components.player import Player
+from game.components.rigid_body import RigidBody, inertia_of_box
+from game.components.shape import Shape
+from game.components.transform import Transform
 from game.components.ui import UIButton, UILabel, UIRect
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL, SHOTGUN
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
-from game.components.transform import Transform
-from game.components.shape import Shape
-from game.components.convex_collider import ConvexCollider
-from game.components.player import Player
-from game.components.rigid_body import RigidBody, inertia_of_box
-from game.map_loader import load_map
 from game.events.ui import ButtonClickedEvent
-from game.resources.ui_state import UIState
+from game.map_loader import load_map
 from game.resources.asset_store import AssetStore, Path
 from game.resources.camera import Camera
-from game.resources.input_state import InputState
 from game.resources.event_bus import EventBus
-from game.systems.weapon_status_hud import weapon_status_hud_system
+from game.resources.input_state import InputState
+from game.resources.ui_state import UIState
+from game.systems.camera_follow import camera_follow_system
+from game.systems.collision import collision_system
 from game.systems.health import Health, health_system
-from game.systems.player_weapon_input import player_weapon_input_system
-from game.systems.projectile import projectile_system
-from game.systems.rendering import render_system
 from game.systems.input import input_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
-from game.systems.collision import collision_system
+from game.systems.player_weapon_input import player_weapon_input_system
+from game.systems.projectile import projectile_system
+from game.systems.rendering import render_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
-from game.components.camera_target import CameraTarget
-from game.systems.camera_follow import camera_follow_system
 from game.systems.weapon import weapon_system
+from game.systems.weapon_status_hud import weapon_status_hud_system
 
 
 class Game:
@@ -74,9 +74,7 @@ class Game:
             WeaponIntent(),
             CameraTarget(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
-            Transform(
-                position=player_spawn, rotation=math.radians(45), scale=(1, 1)
-            ),
+            Transform(position=player_spawn, rotation=math.radians(45), scale=(1, 1)),
             Shape(
                 vertices=(
                     pygame.Vector2(-15, -15),

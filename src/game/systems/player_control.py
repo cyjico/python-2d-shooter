@@ -1,11 +1,11 @@
 import math
 
-from ..core_ecs.world import World
-from ..resources.camera import Camera
-from ..resources.input_state import InputState
 from ..components.player import Player
 from ..components.rigid_body import RigidBody
 from ..components.transform import Transform
+from ..core_ecs.world import World
+from ..resources.camera import Camera
+from ..resources.input_state import InputState
 
 
 def _wrap_angle(angle: float):

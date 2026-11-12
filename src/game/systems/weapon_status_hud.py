@@ -1,5 +1,5 @@
-from game.components.loadout import Loadout
 from game.components.hud import WeaponStatusLabel
+from game.components.loadout import Loadout
 from game.components.player import Player
 from game.components.ui import UILabel
 from game.core_ecs.world import World
