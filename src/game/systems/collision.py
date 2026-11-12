@@ -5,7 +5,9 @@ from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-from game.util.geometry import find_contact_point
+from game.events.collision import CollisionEvent
+from game.resources.event_bus import EventBus
+from game.util.geometry import find_contact_point, get_aabb, solve_sat
 
 BOUNCE_THRESHOLD = 20.0
 """Impacts slower than this (px/s) don't bounce, which stops resting contacts from jittering."""
@@ -18,7 +20,7 @@ def _center_of_mass(transform: Transform, body: RigidBody | None):
     return transform.apply(body.center_of_mass)
 
 
-def resolve_collision(
+def _resolve_collision(
     world: World,
     a: tuple[Entity, Transform, ConvexCollider],
     b: tuple[Entity, Transform, ConvexCollider],
@@ -85,3 +87,46 @@ def resolve_collision(
 
     if body_b is not None and inv_m_b > 0:
         body_b.apply_instant_impulse_at(lr_b, normal * j)
+
+
+def collision_system(world: World):
+    events = world.get_resource(EventBus)
+
+    bodies = list(world.query(Transform, ConvexCollider))
+
+    for i in range(len(bodies)):
+        for j in range(i + 1, len(bodies)):
+            entity_a, (transform_a, collider_a) = bodies[i]
+            entity_b, (transform_b, collider_b) = bodies[j]
+
+            # Cheap AABB test because I will explode if I don't do this
+            ax1, ay1, ax2, ay2 = get_aabb(transform_a, collider_a.laabb)
+            bx1, by1, bx2, by2 = get_aabb(transform_b, collider_b.laabb)
+
+            if ax2 < bx1 or bx2 < ax1 or ay2 < by1 or by2 < ay1:
+                continue
+
+            # Recompute because earlier resolutions may have moved things
+            result = solve_sat(
+                transform_a.apply_all(collider_a.vertices),
+                transform_a.apply(collider_a.centroid),
+                transform_b.apply_all(collider_b.vertices),
+                transform_b.apply(collider_b.centroid),
+            )
+
+            if result is None:
+                continue
+
+            normal, depth = result
+            events.emit(CollisionEvent(entity_a, entity_b, normal, depth))
+
+            if collider_a.is_trigger or collider_b.is_trigger:
+                continue
+
+            _resolve_collision(
+                world,
+                (entity_a, transform_a, collider_a),
+                (entity_b, transform_b, collider_b),
+                normal,
+                depth,
+            )
