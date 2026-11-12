@@ -7,10 +7,9 @@ from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.events.collision import CollisionEvent
 from game.resources.event_bus import EventBus
+from game.util.geometry import get_aabb, solve_sat
 
-from .aabb import get_aabb
 from .resolve_collision import resolve_collision
-from .sat import test_sat
 
 
 def collision_system(world: World):
@@ -31,7 +30,7 @@ def collision_system(world: World):
                 continue
 
             # Recompute because earlier resolutions may have moved things
-            result = test_sat(
+            result = solve_sat(
                 transform_a.apply_all(collider_a.vertices),
                 transform_a.apply(collider_a.centroid),
                 transform_b.apply_all(collider_b.vertices),

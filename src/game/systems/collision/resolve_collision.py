@@ -5,8 +5,7 @@ from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-
-from .contact_point import find_contact_point
+from game.util.geometry import find_contact_point
 
 BOUNCE_THRESHOLD = 20.0
 """Impacts slower than this (px/s) don't bounce, which stops resting contacts from jittering."""
