@@ -89,6 +89,17 @@ class GunSpec:
     projectile_size: tuple[float, float] = (10.0, 4.0)
     projectile_color: tuple[int, int, int] = (255, 230, 120)
 
+    def __post_init__(self):
+        if self.fire_rate <= 0:
+            raise ValueError(f"{self.id}: fire_rate must be positive")
+        if self.magazine_size <= 0:
+            raise ValueError(f"{self.id}: magazine_size must be positive")
+        if self.projectile_speed <= 0:
+            raise ValueError(f"{self.id}: projectile_speed must be positive")
+
+        if self.pellets <= 0:
+            raise ValueError(f"{self.id}: pellets must be positive")
+
 
 @dataclass(slots=True)
 class Gun:
