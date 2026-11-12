@@ -8,9 +8,8 @@ from game.resources.input_state import InputState
 def input_system(world: World, events: Iterable[pygame.event.Event]):
     inputs = world.get_resource(InputState)
 
-    keys = pygame.key.get_pressed()
-
     # Movement
+    keys = pygame.key.get_pressed()
     movement = pygame.Vector2(
         int(keys[pygame.K_d]) - int(keys[pygame.K_a]),
         int(keys[pygame.K_s]) - int(keys[pygame.K_w]),
@@ -23,15 +22,24 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
     # Mouse
     inputs.mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
 
-    # Transitions come from events so a press+release between polls
-    # isn't lost
-    pressed = released = False
+    # Transitions come from events so a press+release between polls isn't lost
+    pressed = released = reload = False
+    switch = 0
     for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pressed = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             released = True
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                reload = True
+            elif event.key == pygame.K_q:
+                switch += 1
+        elif event.type == pygame.MOUSEWHEEL:
+            switch -= event.y
 
     inputs.primary_down = pygame.mouse.get_pressed()[0]
     inputs.primary_pressed = pressed
     inputs.primary_released = released
+    inputs.reload_pressed = reload
+    inputs.weapon_switch = (switch > 0) - (switch < 0)
