@@ -16,8 +16,19 @@ jobs:
       - run: python -m pip install -e .
       - run: python scripts/smoke_test.py
 
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m isort --check-only --diff src
+      - run: python -m black --check --diff src
+
   build:
-    needs: smoke-test
+    needs: [smoke-test, format-check]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4

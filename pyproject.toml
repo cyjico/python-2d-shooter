@@ -12,6 +12,7 @@ shooter = "game.game:main"
 
 [project.optional-dependencies]
 build = ["pyinstaller"]
+dev = ["black", "isort"]
 
 [build-system]
 requires = ["hatchling"]
