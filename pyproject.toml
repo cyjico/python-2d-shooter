@@ -10,6 +10,9 @@ dependencies = [
 [project.scripts]
 shooter = "game.game:main"
 
+[project.optional-dependencies]
+build = ["pyinstaller"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

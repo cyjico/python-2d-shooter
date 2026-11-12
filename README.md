@@ -42,3 +42,29 @@ Or, to see console output while developing:
 ```bash
 python -m game
 ```
+
+## Building an executable
+
+Install the build tools into your virtual environment, from the repository root:
+
+```bash
+python -m pip install -e ".[build]"
+```
+
+Then build:
+
+**Windows (PowerShell)**
+
+```powershell
+pyinstaller --noconfirm --windowed --name Shooter --paths src --add-data "src/game/assets;game/assets" run.py
+```
+
+**Linux / macOS**
+
+```bash
+pyinstaller --noconfirm --windowed --name Shooter --paths src --add-data "src/game/assets:game/assets" run.py
+```
+
+The result is in `dist/Shooter/`. Distribute the whole folder (zip it), not just the executable.
+
+If the executable closes immediately, rebuild without `--windowed` and run it from a terminal to see the error.
