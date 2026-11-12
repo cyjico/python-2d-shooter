@@ -7,7 +7,7 @@ from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.resources.camera import Camera
 from game.resources.input_state import InputState
-from game.util.math import wrap_angle
+from game.util.numerics import wrap_angle
 
 
 def player_control_system(world: World, dt: float):
