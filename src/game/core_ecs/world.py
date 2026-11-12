@@ -84,6 +84,11 @@ class World:
     def query(
         self, *component_types: type[Any]
     ) -> Iterator[tuple[Entity, tuple[Any, ...]]]:
+        """Queries the components of entities that have all of components listed.
+
+        It is *RECCOMENDED* to query only for a single component, if possible,
+        for performance reasons.
+        """
         if not component_types:
             return
 

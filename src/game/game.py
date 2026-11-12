@@ -6,6 +6,7 @@ from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
 from game.components.hud import WeaponStatusLabel
 from game.components.loadout import Gun, Loadout
+from game.components.mover import Mover
 from game.components.player import Player
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.components.shape import Shape
@@ -26,6 +27,7 @@ from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
 from game.systems.health import Health, health_system
 from game.systems.input import input_system
+from game.systems.mover import mover_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
 from game.systems.player_weapon_input import player_weapon_input_system
@@ -68,31 +70,28 @@ class Game:
         )
 
         # Entities
+        player_verts = (
+            pygame.Vector2(-15, -15),
+            pygame.Vector2(10, -15),
+            pygame.Vector2(22, 0),
+            pygame.Vector2(10, 15),
+            pygame.Vector2(-15, 15),
+        )
+
         self.player = self.world.create_entity(
             Player(),
             Loadout(slots=[Gun.full(PISTOL), Gun.full(SHOTGUN)]),
             WeaponIntent(),
             CameraTarget(),
+            Mover(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(position=player_spawn, rotation=math.radians(45), scale=(1, 1)),
             Shape(
-                vertices=(
-                    pygame.Vector2(-15, -15),
-                    pygame.Vector2(10, -15),
-                    pygame.Vector2(22, 0),
-                    pygame.Vector2(10, 15),
-                    pygame.Vector2(-15, 15),
-                ),
+                vertices=player_verts,
                 color=(255, 0, 120),
             ),
             ConvexCollider(
-                vertices=(
-                    pygame.Vector2(-15, -15),
-                    pygame.Vector2(15, -15),
-                    pygame.Vector2(22, 0),
-                    pygame.Vector2(15, 15),
-                    pygame.Vector2(-15, 15),
-                ),
+                vertices=player_verts,
             ),
         )
 
@@ -126,6 +125,8 @@ class Game:
         camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
+
+        mover_system(self.world, dt)
 
         weapon_system(self.world, dt)
 
