@@ -4,6 +4,6 @@ from game.core_ecs.entity import Entity
 
 
 @dataclass(slots=True)
-class ButtonClicked:
+class ButtonClickedEvent:
     entity: Entity
     action: str

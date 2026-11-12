@@ -1,6 +1,6 @@
 from game.components.ui import ButtonState, UIButton, UIPanel, UIRect
 from game.core_ecs.world import World
-from game.events.ui import ButtonClicked
+from game.events.ui import ButtonClickedEvent
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.ui_state import UIState
@@ -48,7 +48,7 @@ def ui_interaction_system(world: World):
         if pressed is not None and pressed == hovered:
             button = world.try_get_component(pressed, UIButton)
             if button is not None:
-                events.emit(ButtonClicked(pressed, button.action))
+                events.emit(ButtonClickedEvent(pressed, button.action))
 
         ui_state.pressed = None
 

@@ -11,7 +11,7 @@ from game.components.convex_collider import ConvexCollider
 from game.components.player import Player
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.map_loader import load_map
-from game.events.ui import ButtonClicked
+from game.events.ui import ButtonClickedEvent
 from game.resources.ui_state import UIState
 from game.resources.asset_store import AssetStore, Path
 from game.resources.camera import Camera
