@@ -45,6 +45,7 @@ jobs:
         with:
           python-version: "3.14"
       - run: python -m pip install -e ".[build]"
+      # No --windowed on purpose: keeps tracebacks visible in CI.
       - run: pyinstaller --noconfirm --name Shooter --paths src --add-data "src/game/assets;game/assets" run.py
       - uses: actions/upload-artifact@v4
         with:
