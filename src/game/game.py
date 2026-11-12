@@ -107,6 +107,10 @@ class Game:
             WeaponStatusLabel(),
         )
 
+        # Game state
+        self.running = True
+        self.events: list[pygame.event.Event] = []
+
     def handle_events(self):
         self.events = pygame.event.get()
         for event in self.events:
