@@ -2,7 +2,11 @@ import math
 
 import pygame
 
+from game.components.hud import WeaponStatusLabel
+from game.components.loadout import Gun, Loadout
 from game.components.ui import UIButton, UILabel, UIRect
+from game.components.weapon_intent import WeaponIntent
+from game.constants.guns import PISTOL, SHOTGUN
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
 from game.components.transform import Transform
@@ -17,6 +21,10 @@ from game.resources.asset_store import AssetStore, Path
 from game.resources.camera import Camera
 from game.resources.input_state import InputState
 from game.resources.event_bus import EventBus
+from game.systems.weapon_status_hud import weapon_status_hud_system
+from game.systems.health import Health, health_system
+from game.systems.player_weapon_input import player_weapon_input_system
+from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
 from game.systems.input import input_system
 from game.systems.physics import physics_system
@@ -27,6 +35,7 @@ from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
 from game.components.camera_target import CameraTarget
 from game.systems.camera_follow import camera_follow_system
+from game.systems.weapon import weapon_system
 
 
 class Game:
@@ -58,8 +67,11 @@ class Game:
             self.world, Path(__file__).parent / "assets" / "maps" / "level1.txt"
         )
 
+        # Entities
         self.player = self.world.create_entity(
             Player(),
+            Loadout(slots=[Gun.full(PISTOL), Gun.full(SHOTGUN)]),
+            WeaponIntent(),
             CameraTarget(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(
@@ -88,9 +100,12 @@ class Game:
 
         self.world.get_resource(Camera).center_on(player_spawn)
 
-        # Game state
-        self.running = True
-        self.events: list[pygame.event.Event] = []
+        # UI
+        self.world.create_entity(
+            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -16), size=(260, 30)),
+            UILabel(""),
+            WeaponStatusLabel(),
+        )
 
     def handle_events(self):
         self.events = pygame.event.get()
@@ -108,9 +123,17 @@ class Game:
 
         camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
+        player_weapon_input_system(self.world)
+
+        weapon_system(self.world, dt)
 
         physics_system(self.world, dt)
         collision_system(self.world)
+
+        projectile_system(self.world, dt)
+        health_system(self.world)
+
+        weapon_status_hud_system(self.world)
 
     def render(self):
         self.screen.fill(self.settings.background_color)
