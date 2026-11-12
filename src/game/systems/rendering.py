@@ -1,9 +1,9 @@
 import pygame
 
-from game.resources.camera import Camera
-from game.core_ecs.world import World
-from game.components.transform import Transform
 from game.components.shape import Shape
+from game.components.transform import Transform
+from game.core_ecs.world import World
+from game.resources.camera import Camera
 
 
 def render_system(world: World, surface: pygame.Surface):

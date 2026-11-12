@@ -2,8 +2,8 @@ import math
 import random
 
 from game.components.loadout import FireMode, Gun, Loadout
-from game.components.weapon_intent import WeaponIntent
 from game.components.transform import Transform
+from game.components.weapon_intent import WeaponIntent
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.prefabs.gun_projectile import spawn_gun_projectile

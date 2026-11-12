@@ -12,6 +12,7 @@ shooter = "game.game:main"
 
 [project.optional-dependencies]
 build = ["pyinstaller"]
+dev = ["black", "isort"]
 
 [build-system]
 requires = ["hatchling"]
@@ -19,3 +20,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/game"]
+
+[tool.isort]
+profile = "black"
+src_paths = ["src"]
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.14"

@@ -1,5 +1,5 @@
-from game.components.weapon_intent import WeaponIntent
 from game.components.player import Player
+from game.components.weapon_intent import WeaponIntent
 from game.core_ecs.world import World
 from game.resources.input_state import InputState
 from game.resources.ui_state import UIState

@@ -1,8 +1,8 @@
 import pygame
 
-from ..core_ecs.world import World
-from ..components.transform import Transform
 from ..components.rigid_body import RigidBody
+from ..components.transform import Transform
+from ..core_ecs.world import World
 
 
 def physics_system(world: World, dt: float):

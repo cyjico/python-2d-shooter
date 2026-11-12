@@ -16,9 +16,7 @@ def _get_edge_normals(points: Sequence[pygame.Vector2]) -> Iterator[pygame.Vecto
         yield pygame.Vector2(-edge.y, edge.x).normalize()
 
 
-def _project_all(
-    points: Sequence[pygame.Vector2], axis: pygame.Vector2
-):
+def _project_all(points: Sequence[pygame.Vector2], axis: pygame.Vector2):
     dots = [point.dot(axis) for point in points]
     return min(dots), max(dots)
 
