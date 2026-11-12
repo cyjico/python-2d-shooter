@@ -88,7 +88,12 @@ def _spawn_crate(world: World, center: pygame.Vector2):
     vertices = _box_vertices(CRATE_SIZE, CRATE_SIZE)
     mass = mass_of_box(0.2, CRATE_SIZE, CRATE_SIZE)
     world.create_entity(
-        RigidBody(mass=mass, inertia=inertia_of_box(mass, CRATE_SIZE, CRATE_SIZE)),
+        RigidBody(
+            mass=mass,
+            drag=0.4,
+            inertia=inertia_of_box(mass, CRATE_SIZE, CRATE_SIZE),
+            angular_drag=0.4,
+        ),
         Transform(position=center),
         Shape(vertices=vertices, color=CRATE_COLOR),
         ConvexCollider(vertices=vertices, bounciness=0.5),
