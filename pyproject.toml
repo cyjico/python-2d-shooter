@@ -28,3 +28,5 @@ src_paths = ["src"]
 [tool.pyright]
 include = ["src"]
 pythonVersion = "3.14"
+deprecateTypingAliases = "standard"
+typeCheckingMode = "standard"
