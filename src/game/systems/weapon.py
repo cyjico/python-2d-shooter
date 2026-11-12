@@ -17,6 +17,8 @@ def weapon_system(world: World, dt: float):
         for weapon in loadout.slots:
             weapon.cooldown = max(0.0, weapon.cooldown - dt)
 
+        if intent.select is not None:
+            loadout.equip(intent.select)
         if intent.switch:
             loadout.cycle(intent.switch)
 

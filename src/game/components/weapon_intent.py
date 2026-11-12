@@ -13,3 +13,5 @@ class WeaponIntent:
     reload: bool = False
     switch: int = 0
     """-1 = previous weapon, +1 = next weapon, 0 = stay."""
+    select: int | None = None
+    """Loadout slot to equip directly. Applied before `switch`."""

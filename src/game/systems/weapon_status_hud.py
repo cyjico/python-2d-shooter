@@ -12,9 +12,9 @@ def weapon_status_hud_system(world: World):
     if gun is None:
         text = ""
     elif gun.reloading:
-        text = f"{gun.spec.name}  reloading..."
+        text = "reloading..."
     else:
-        text = f"{gun.spec.name}  {gun.magazine} / {gun.reserve}"
+        text = f"{gun.magazine} / {gun.reserve}"
 
     for _, (label, _) in world.query(UILabel, WeaponStatusLabel):
         label.text = text

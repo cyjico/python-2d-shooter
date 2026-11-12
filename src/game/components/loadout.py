@@ -18,28 +18,32 @@ class Loadout:
     def equipped(self):
         return self.slots[self.active] if self.slots else None
 
-    def give(self, spec: GunSpec) -> Gun | None:
-        """Hand over a gun (this is what the mystery box will call).
+    def equip(self, index: int):
+        """Put the gun in `index` in hand. Invalid or current indices do nothing."""
+        if not 0 <= index < len(self.slots) or index == self.active:
+            return
+        # Switching away cancels a reload in progress.
+        self.slots[self.active].reload_remaining = 0.0
+        self.active = index
 
-        - Already holding this gun type: refills its ammo.
-        - Free slot: adds it and equips it.
-        - Slots full: replaces the gun in hand.
+    def put_primary(self, gun: Gun):
+        """Make `gun` the primary (slot 0) and equip it. Other guns shift down.
 
-        Returns the gun that was replaced, if any.
+        Only valid while there is a free slot.
         """
-        for gun in self.slots:
-            if gun.spec.id == spec.id:
-                gun.refill()
-                return None
+        if len(self.slots) >= self.max_slots:
+            raise ValueError("No free slot; use replace() instead")
+        if self.slots:
+            self.slots[self.active].reload_remaining = 0.0
+        self.slots.insert(0, gun)
+        self.active = 0
 
-        new_gun = Gun.full(spec)
-        if len(self.slots) < self.max_slots:
-            self.slots.append(new_gun)
-            self.active = len(self.slots) - 1
-            return None
-
-        replaced = self.slots[self.active]
-        self.slots[self.active] = new_gun
+    def replace(self, index: int, gun: Gun) -> Gun:
+        """Swap the gun in `index` for `gun` and equip it. Returns the old gun."""
+        self.slots[self.active].reload_remaining = 0.0
+        replaced = self.slots[index]
+        self.slots[index] = gun
+        self.active = index
         return replaced
 
     def cycle(self, step: int):
@@ -48,6 +52,16 @@ class Loadout:
         # Switching away cancels a reload in progress.
         self.slots[self.active].reload_remaining = 0.0
         self.active = (self.active + step) % len(self.slots)
+
+
+class Rarity(Enum):
+    """Mystery box tiers, weakest to strongest."""
+
+    COMMON = 0
+    UNCOMMON = 1
+    RARE = 2
+    EPIC = 3
+    LEGENDARY = 4
 
 
 class FireMode(Enum):
@@ -113,10 +127,17 @@ class Gun:
     """Seconds until the next shot is allowed."""
     reload_remaining: float = 0.0
     """Seconds left on the current reload. 0 = not reloading."""
+    rarity: Rarity | None = None
+    """Mystery box tier. None = a plain gun (e.g. the starting pistol)."""
 
     @classmethod
-    def full(cls, spec: GunSpec):
-        return cls(spec=spec, magazine=spec.magazine_size, reserve=spec.max_reserve)
+    def full(cls, spec: GunSpec, rarity: Rarity | None = None):
+        return cls(
+            spec=spec,
+            magazine=spec.magazine_size,
+            reserve=spec.max_reserve,
+            rarity=rarity,
+        )
 
     @property
     def reloading(self):

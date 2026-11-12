@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 import pygame
@@ -7,6 +8,7 @@ from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.world import World
+from game.resources.map_layout import MapLayout
 
 TILE_SIZE = 40
 """Width and height of one map character, in pixels."""
@@ -100,17 +102,23 @@ def _spawn_crate(world: World, center: pygame.Vector2):
     )
 
 
-def load_map(world: World, path: Path) -> pygame.Vector2:
-    """Create entities for every tile in a text map.
+@dataclass(slots=True)
+class MapSpawns:
+    player: pygame.Vector2
+    """World position of the player spawn (`P`)."""
+    mystery_box: pygame.Vector2 | None
+    """World position of the mystery box (`M`), if the map has one."""
 
-    Returns:
-        pygame.Vector2: World position of the player spawn (`P`).
-    """
+
+def load_map(world: World, path: Path) -> MapSpawns:
+    """Create entities for every tile in a text map and add a MapLayout resource."""
     lines = path.read_text().splitlines()
 
+    world.add_resource(MapLayout(tuple(lines), TILE_SIZE))
     _spawn_merged_walls(world, lines)
 
     player_spawn = None
+    box_spawn = None
 
     # `row` is the line number (y), `col` is the character number (x).
     for row, line in enumerate(lines):
@@ -126,9 +134,11 @@ def load_map(world: World, path: Path) -> pygame.Vector2:
                 _spawn_crate(world, center)
             elif char == "P":
                 player_spawn = center
+            elif char == "M":
+                box_spawn = center
             # Anything else (like ".") is empty floor.
 
     if player_spawn is None:
         raise ValueError(f"Map {path.name} has no player spawn 'P'")
 
-    return player_spawn
+    return MapSpawns(player=player_spawn, mystery_box=box_spawn)
