@@ -38,7 +38,7 @@ def weapon_system(world: World, dt: float):
             continue
 
         wants_fire = (
-            intent.fire_held
+            intent.fire_held or intent.fire_pressed
             if weapon.spec.fire_mode is FireMode.AUTO
             else intent.fire_pressed
         )
