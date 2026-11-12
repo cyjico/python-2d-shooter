@@ -9,7 +9,8 @@ from game.components.transform import Transform
 from game.components.shape import Shape
 from game.components.convex_collider import ConvexCollider
 from game.components.player import Player
-from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
+from game.components.rigid_body import RigidBody, inertia_of_box
+from game.map_loader import load_map
 from game.events.ui import ButtonClicked
 from game.resources.ui_state import UIState
 from game.resources.asset_store import AssetStore, Path
@@ -52,13 +53,17 @@ class Game:
         self.world.add_resource(AssetStore(Path(__file__).parent / "assets"))
         self.world.add_resource(UIState())
 
-        # TODO: Remove test entities when done.
+        # Map
+        player_spawn = load_map(
+            self.world, Path(__file__).parent / "assets" / "maps" / "level1.txt"
+        )
+
         self.player = self.world.create_entity(
             Player(),
             CameraTarget(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(
-                position=pygame.Vector2(0, 0), rotation=math.radians(45), scale=(1, 1)
+                position=player_spawn, rotation=math.radians(45), scale=(1, 1)
             ),
             Shape(
                 vertices=(
@@ -81,32 +86,7 @@ class Game:
             ),
         )
 
-        self.world.get_resource(Camera).center_on(pygame.Vector2(0, 0))
-
-        test_width, test_height = 40, 160
-        test_vertices = (
-            pygame.Vector2(-test_width / 2, -test_height / 2),
-            pygame.Vector2(test_width / 2, -test_height / 2),
-            pygame.Vector2(test_width / 2, test_height / 2),
-            pygame.Vector2(-test_width / 2, test_height / 2),
-        )
-        test_mass = mass_of_box(0.2, test_width, test_height)
-        self.world.create_entity(
-            RigidBody(
-                mass=test_mass,
-                inertia=inertia_of_box(test_mass, test_width, test_height),
-                center_of_mass=pygame.Vector2(0, 0),
-            ),
-            Transform(position=pygame.Vector2(300, 100)),
-            Shape(
-                vertices=test_vertices,
-                color=(200, 200, 200),
-            ),
-            ConvexCollider(
-                vertices=test_vertices,
-                bounciness=0.5,
-            ),
-        )
+        self.world.get_resource(Camera).center_on(player_spawn)
 
         # Game state
         self.running = True
