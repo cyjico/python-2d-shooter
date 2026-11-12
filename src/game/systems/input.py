@@ -25,6 +25,7 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
 
     # Transitions come from events so a press+release between polls isn't lost
     pressed = released = reload = False
+    inputs.dash_pressed = False
     switch = 0
     for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -36,6 +37,8 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
                 reload = True
             elif event.key == pygame.K_q:
                 switch += 1
+            elif event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_SPACE):
+                inputs.dash_pressed = True
         elif event.type == pygame.MOUSEWHEEL:
             switch -= event.y
 

@@ -12,4 +12,5 @@ class InputState:
     primary_released: bool = False
     reload_pressed: bool = False
     weapon_switch: int = 0
+    dash_pressed: bool = False
     """-1 / 0 / +1, from the mouse wheel or Q."""

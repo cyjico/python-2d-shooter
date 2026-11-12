@@ -38,6 +38,8 @@ from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
 from game.systems.weapon import weapon_system
 from game.systems.weapon_status_hud import weapon_status_hud_system
+from game.components.dash import Dash
+from game.systems.dash import dash_system
 
 
 class Game:
@@ -84,6 +86,7 @@ class Game:
             WeaponIntent(),
             CameraTarget(),
             Mover(),
+            Dash(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(position=player_spawn, rotation=math.radians(45), scale=(1, 1)),
             Shape(
@@ -127,6 +130,7 @@ class Game:
         player_weapon_input_system(self.world)
 
         mover_system(self.world, dt)
+        dash_system(self.world, dt)
 
         weapon_system(self.world, dt)
 
