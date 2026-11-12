@@ -64,7 +64,7 @@ class Game:
 
         # Map
         player_spawn = load_map(
-            self.world, Path(__file__).parent / "assets" / "maps" / "level1.txt"
+            self.world, Path(__file__).parent.parent / "assets" / "maps" / "level1.txt"
         )
 
         # Entities
