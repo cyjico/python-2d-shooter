@@ -15,10 +15,10 @@ Clone the repository and navigate to its root directory.
 
 **Windows (PowerShell)**
 
-```bash
+```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 **Linux / macOS**
@@ -26,21 +26,19 @@ python -m pip install -r requirements.txt
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 ## Usage
 
-**Windows**
+With the virtual environment activated, from any directory:
 
 ```bash
-cd src
-python -m game
+shooter
 ```
 
-**Linux / macOS**
+Or, to see console output while developing:
 
 ```bash
-cd src
-python3 -m game
+python -m game
 ```
