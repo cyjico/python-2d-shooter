@@ -14,14 +14,14 @@ def projectile_system(world: World, dt: float):
     """Emits a DamageEvent. Run after collision_system."""
     events = world.get_resource(EventBus)
 
+    for collision in events.read(CollisionEvent):
+        _handle_hit(world, events, collision.entity_a, collision.entity_b)
+        _handle_hit(world, events, collision.entity_b, collision.entity_a)
+
     for entity, (projectile,) in world.query(Projectile):
         projectile.lifetime -= dt
         if projectile.lifetime <= 0:
             world.destroy_entity(entity)
-
-    for collision in events.read(CollisionEvent):
-        _handle_hit(world, events, collision.entity_a, collision.entity_b)
-        _handle_hit(world, events, collision.entity_b, collision.entity_a)
 
 
 def _handle_hit(world: World, events: EventBus, bullet: Entity, other: Entity):
