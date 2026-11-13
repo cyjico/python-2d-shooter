@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from types import MappingProxyType
 
 
 class Stat(Enum):
@@ -30,6 +31,12 @@ class BuffSpec:
     flags: frozenset[Flag] = frozenset()
     bonus_health: float = 0.0
     """Extra health that absorbs damage first. Whatever is left is lost when the buff ends."""
+
+    def __post_init__(self):
+        # Copy so later changes to the caller's dict can't alter this spec.
+        object.__setattr__(
+            self, "multipliers", MappingProxyType(dict(self.multipliers))
+        )
 
 
 @dataclass(slots=True)
