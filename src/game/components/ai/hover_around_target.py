@@ -12,5 +12,6 @@ class HoverAroundTargetAI:
     dist_tolerance_sqr: float = 40.0**2
     """Inside preferred +/- `this`."""
 
+    # Runtime state
     strafing: bool = False
     strafe_side: int = 1
