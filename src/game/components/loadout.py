@@ -4,52 +4,6 @@ from enum import Enum, auto
 import pygame
 
 
-@dataclass(slots=True)
-class Loadout:
-    """The guns an entity carries and which one is in hand."""
-
-    slots: list[Gun] = field(default_factory=list)
-    active: int = 0
-    max_slots: int = 2
-    muzzle: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(24, 0))
-    """Where projectiles spawn. Local to the entity's transform."""
-
-    @property
-    def equipped(self):
-        return self.slots[self.active] if self.slots else None
-
-    def give(self, spec: GunSpec) -> Gun | None:
-        """Hand over a gun (this is what the mystery box will call).
-
-        - Already holding this gun type: refills its ammo.
-        - Free slot: adds it and equips it.
-        - Slots full: replaces the gun in hand.
-
-        Returns the gun that was replaced, if any.
-        """
-        for gun in self.slots:
-            if gun.spec.id == spec.id:
-                gun.refill()
-                return None
-
-        new_gun = Gun.full(spec)
-        if len(self.slots) < self.max_slots:
-            self.slots.append(new_gun)
-            self.active = len(self.slots) - 1
-            return None
-
-        replaced = self.slots[self.active]
-        self.slots[self.active] = new_gun
-        return replaced
-
-    def cycle(self, step: int):
-        if len(self.slots) < 2:
-            return
-        # Switching away cancels a reload in progress.
-        self.slots[self.active].reload_remaining = 0.0
-        self.active = (self.active + step) % len(self.slots)
-
-
 class FireMode(Enum):
     SEMI = auto()
     """One shot per click."""
@@ -139,3 +93,49 @@ class Gun:
         self.magazine = self.spec.magazine_size
         self.reserve = self.spec.max_reserve
         self.reload_remaining = 0.0
+
+
+@dataclass(slots=True)
+class Loadout:
+    """The guns an entity carries and which one is in hand."""
+
+    slots: list[Gun] = field(default_factory=list)
+    active: int = 0
+    max_slots: int = 2
+    muzzle: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(24, 0))
+    """Where projectiles spawn. Local to the entity's transform."""
+
+    @property
+    def equipped(self):
+        return self.slots[self.active] if self.slots else None
+
+    def give(self, spec: GunSpec) -> Gun | None:
+        """Hand over a gun (this is what the mystery box will call).
+
+        - Already holding this gun type: refills its ammo.
+        - Free slot: adds it and equips it.
+        - Slots full: replaces the gun in hand.
+
+        Returns the gun that was replaced, if any.
+        """
+        for gun in self.slots:
+            if gun.spec.id == spec.id:
+                gun.refill()
+                return None
+
+        new_gun = Gun.full(spec)
+        if len(self.slots) < self.max_slots:
+            self.slots.append(new_gun)
+            self.active = len(self.slots) - 1
+            return None
+
+        replaced = self.slots[self.active]
+        self.slots[self.active] = new_gun
+        return replaced
+
+    def cycle(self, step: int):
+        if len(self.slots) < 2:
+            return
+        # Switching away cancels a reload in progress.
+        self.slots[self.active].reload_remaining = 0.0
+        self.active = (self.active + step) % len(self.slots)
