@@ -19,6 +19,9 @@ class Dash:
     direction: pygame.Vector2 = field(default_factory=pygame.Vector2)
     hit: set[Entity] = field(default_factory=set)
     """Entities already hit by the current dash."""
+    moving: bool = False
+    """True on every frame the dash drove movement, including its last one.
+    Unlike `active`, this is still set when collisions are checked."""
 
     @property
     def active(self) -> bool:

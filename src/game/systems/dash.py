@@ -21,6 +21,7 @@ def dash_system(world: World, dt: float):
         Player, Dash, RigidBody, Transform
     ):
         dash.cooldown_left = max(0.0, dash.cooldown_left - dt)
+        dash.moving = False
 
         if inputs.dash_pressed and not dash.active and dash.cooldown_left == 0.0:
             if inputs.movement.length_squared() > 0:
@@ -37,6 +38,7 @@ def dash_system(world: World, dt: float):
             dash.hit.clear()
 
         if dash.active:
+            dash.moving = True
             # Override whatever mover_system queued this frame.
             rigidbody.accumulated_acceleration.update(0, 0)
             rigidbody.linear_velocity = dash.direction * dash.speed
@@ -53,7 +55,7 @@ def dash_impact_system(world: World):
             (collision.entity_b, collision.entity_a),
         ):
             dash = world.try_get_component(me, Dash)
-            if dash is None or not dash.active or other in dash.hit:
+            if dash is None or not dash.moving or other in dash.hit:
                 continue
             if not world.has_component(other, Breakable):
                 continue
