@@ -23,7 +23,7 @@ def mover_system(world: World, dt: float):
 
         rigidbody.accumulated_acceleration += acceleration
 
-        if mover.face_angle:
+        if mover.face_angle is not None:
             desired_velocity = max(
                 -mover.turn_speed,
                 min(
