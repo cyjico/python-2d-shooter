@@ -7,6 +7,7 @@ import pygame
 from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash
+from game.components.health import Health
 from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
@@ -93,6 +94,7 @@ class Game:
 
         self.player = self.world.create_entity(
             Player(),
+            Health(maximum=100),
             Loadout(slots=[Gun.full(PISTOL)]),
             Wallet(balance=800),
             WeaponIntent(),
