@@ -11,29 +11,16 @@ from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.prefabs.enemies import spawn_charger
 from game.resources.map_layout import MapLayout
+from game.util.geometry import rectangle
 
 TILE_SIZE = 40
 """Width and height of one map character, in pixels."""
 
 WALL_COLOR = (90, 90, 110)
-CRATE_COLOR = (200, 200, 200)
-CRATE_SIZE = 30
-"""Crates are a bit smaller than a tile so they fit through 1-tile gaps."""
 
 ENEMY_SPAWNERS = {
     "X": spawn_charger,
 }
-
-
-def _box_vertices(width: float, height: float):
-    """Four corners of a rectangle centred on (0, 0), clockwise."""
-    half_w, half_h = width / 2, height / 2
-    return (
-        pygame.Vector2(-half_w, -half_h),
-        pygame.Vector2(half_w, -half_h),
-        pygame.Vector2(half_w, half_h),
-        pygame.Vector2(-half_w, half_h),
-    )
 
 
 def _spawn_wall(world: World, col: int, row: int, width: int, height: int):
@@ -43,7 +30,7 @@ def _spawn_wall(world: World, col: int, row: int, width: int, height: int):
         col * TILE_SIZE + pixel_w / 2,
         row * TILE_SIZE + pixel_h / 2,
     )
-    vertices = _box_vertices(pixel_w, pixel_h)
+    vertices = rectangle(pixel_w, pixel_h)
     # No RigidBody => the collision system treats it as immovable.
     world.create_entity(
         Transform(position=center),
@@ -92,28 +79,14 @@ def _spawn_merged_walls(world: World, lines: list[str]):
             _spawn_wall(world, col, row, width, height)
 
 
-def _spawn_crate(world: World, center: pygame.Vector2):
-    vertices = _box_vertices(CRATE_SIZE, CRATE_SIZE)
-    mass = mass_of_box(0.2, CRATE_SIZE, CRATE_SIZE)
-    world.create_entity(
-        RigidBody(
-            mass=mass,
-            drag=0.4,
-            inertia=inertia_of_box(mass, CRATE_SIZE, CRATE_SIZE),
-            angular_drag=0.4,
-        ),
-        Transform(position=center),
-        Shape(vertices=vertices, color=CRATE_COLOR),
-        ConvexCollider(vertices=vertices, bounciness=0.5),
-    )
-
-
 @dataclass(slots=True)
 class MapSpawns:
     player: pygame.Vector2
-    """World position of the player spawn (`P`)."""
-    mystery_box: pygame.Vector2 | None
-    """World position of the mystery box (`M`), if the map has one."""
+    """World position of the player spawn."""
+    mystery_boxes: dict[tuple[float, float], bool]
+    """World position of the mystery boxes, if the map has one, ad if they're available."""
+    crates: dict[tuple[float, float], bool]
+    """World position of the crates, if the map has one, and if they're available."""
 
 
 def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
@@ -124,7 +97,8 @@ def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
     _spawn_merged_walls(world, lines)
 
     player_spawn = None
-    box_spawn = None
+    mystery_boxes: dict[tuple[float, float], bool] = dict()
+    crates: dict[tuple[float, float], bool] = dict()
 
     # `row` is the line number (y), `col` is the character number (x).
     for row, line in enumerate(lines):
@@ -136,17 +110,17 @@ def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
             )
 
             # Walls ("#") were already handled by _spawn_merged_walls.
-            if char == "C":
-                _spawn_crate(world, center)
-            elif char == "P":
+            if char == "P":
                 player_spawn = center
+            elif char == "C":
+                crates[(center.x, center.y)] = True
+            elif char == "M":
+                mystery_boxes[(center.x, center.y)] = True
             elif char in ENEMY_SPAWNERS:
                 ENEMY_SPAWNERS[char](world, center, player)
-            elif char == "M":
-                box_spawn = center
             # Anything else (like ".") is empty floor.
 
     if player_spawn is None:
         raise ValueError(f"Map {path.name} has no player spawn 'P'")
 
-    return MapSpawns(player=player_spawn, mystery_box=box_spawn)
+    return MapSpawns(player_spawn, mystery_boxes, crates)

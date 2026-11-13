@@ -19,7 +19,7 @@ def spawn_mystery_box(world: World, position: pygame.Vector2) -> Entity:
         pygame.Vector2(half, half),
         pygame.Vector2(-half, half),
     )
-    # No RigidBody => immovable, like a wall.
+
     return world.create_entity(
         MysteryBox(),
         Transform(position=pygame.Vector2(position)),

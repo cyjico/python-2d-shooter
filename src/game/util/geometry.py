@@ -240,3 +240,14 @@ def angle_of(vec2: pygame.Vector2):
 
 def rot_to_vec2(rot: float):
     return pygame.Vector2(math.cos(rot), math.sin(rot))
+
+
+def rectangle(width: float, height: float):
+    """Four corners of a rectangle centred on (0, 0), clockwise."""
+    half_w, half_h = width / 2, height / 2
+    return (
+        pygame.Vector2(-half_w, -half_h),
+        pygame.Vector2(half_w, -half_h),
+        pygame.Vector2(half_w, half_h),
+        pygame.Vector2(-half_w, half_h),
+    )

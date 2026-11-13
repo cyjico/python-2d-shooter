@@ -122,13 +122,6 @@ class Game:
         self.world.get_component(self.player, Transform).position = spawns.player
         self.world.get_resource(Camera).center_on(spawns.player)
 
-        box_spawn = spawns.mystery_box
-        if box_spawn is None:
-            box_spawn = random.choice(
-                self.world.get_resource(MapLayout).spawnable_tiles()
-            )
-        self.mystery_box = spawn_mystery_box(self.world, box_spawn)
-
         # UI
         self.world.create_entity(
             UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -16), size=(160, 36)),
