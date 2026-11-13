@@ -30,6 +30,9 @@ class World:
         for pool in self._components.values():
             pool.pop(entity, None)
 
+    def is_alive(self, entity: Entity) -> bool:
+        return entity in self._entities
+
     def add_component(self, entity: Entity, component):
         if entity not in self._entities:
             raise KeyError(f"Entity {entity} does not exist")

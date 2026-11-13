@@ -26,3 +26,8 @@ class InteractPromptLabel:
 @dataclass(slots=True)
 class MysteryBoxUI:
     """Marks UI elements of the mystery box menu, destroyed when it changes."""
+
+
+@dataclass(slots=True)
+class BuffStatusLabel:
+    """Marks a UILabel that lists the player's active buffs."""

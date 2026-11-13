@@ -1,19 +1,26 @@
 import os
-
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-os.environ["SDL_AUDIODRIVER"] = "dummy"
+from dataclasses import replace
 
 import pygame
 
+from game.components.bounty import Bounty
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
+from game.components.relocatable import Relocatable
 from game.components.transform import Transform
 from game.components.wallet import Wallet
+from game.constants.buffs import MONEY_BOOSTS
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
-from game.resources.map_layout import MapLayout
+from game.prefabs.enemies import spawn_charger
+from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.systems.health import death_cleanup_system, health_system
+from game.util.buffs import grant_buff
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 game = Game()
 
@@ -89,7 +96,8 @@ assert box.price == 570, box.price  # (400 + 200) * 0.95
 
 new_box_pos = world.get_component(game.mystery_box, Transform).position
 assert new_box_pos.distance_to(old_box_pos) >= 240
-assert new_box_pos in world.get_resource(MapLayout).spawnable_tiles()
+points = world.get_component(game.mystery_box, Relocatable).points
+assert new_box_pos in points
 
 # Number keys switch slots.
 press(pygame.K_2)
@@ -123,6 +131,36 @@ press(pygame.K_ESCAPE)
 assert session.phase is BoxPhase.CLOSED
 assert loadout.slots == [primary, offered]
 assert box.price == price + 200
+
+
+KILL_SPOT = pygame.Vector2(260, 220)
+"""Open floor away from walls, the boxes and the player's spawn."""
+
+
+# Kills pay the killer's wallet, scaled by the money buff.
+def kill_charger():
+    enemy = spawn_charger(world, KILL_SPOT, game.player)
+    bounty = world.get_component(enemy, Bounty).amount
+
+    # A near-stationary, lethal bullet on top of the charger. Damage, bounty and
+    # cleanup all run through Game.update, so a missing system fails the test.
+    slow_pistol = replace(ALL_GUNS["pistol"], projectile_speed=1.0)
+    spawn_gun_projectile(
+        world, game.player, KILL_SPOT, 0.0, slow_pistol, damage_scale=1e9
+    )
+    step()
+    assert not world.is_alive(enemy)
+    return bounty
+
+
+before = wallet.balance
+bounty = kill_charger()
+assert wallet.balance == before + bounty, wallet.balance
+
+grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
+before = wallet.balance
+bounty = kill_charger()
+assert wallet.balance == before + round(bounty * 1.75), wallet.balance
 
 step(60)
 

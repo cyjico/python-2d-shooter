@@ -9,6 +9,7 @@ from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash
 from game.components.health import Health
 from game.components.hud import (
+    BuffStatusLabel,
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
@@ -17,31 +18,41 @@ from game.components.hud import (
 from game.components.loadout import Gun, Loadout
 from game.components.mover import Mover
 from game.components.player import Player
+from game.components.relocatable import Relocatable
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.components.shape import Shape
+from game.components.spawner import Spawner
 from game.components.transform import Transform
 from game.components.ui import UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL
+from game.constants.mystery_box import MIN_MOVE_DISTANCE
+from game.constants.spawning import (
+    CRATE_INTERVAL,
+)
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
-from game.map_loader import load_map
+from game.map_loader import TILE_SIZE, MapSpawns, load_map
+from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
-from game.resources.map_layout import MapLayout
 from game.resources.mystery_box_session import MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
+from game.systems.bounty import bounty_system
+from game.systems.breakable import break_cleanup_system, breakable_system
+from game.systems.buff import buff_drop_system, buff_tick_system
+from game.systems.buff_hud import buff_hud_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
-from game.systems.dash import dash_system
-from game.systems.health import health_system
+from game.systems.dash import dash_impact_system, dash_system
+from game.systems.health import death_cleanup_system, health_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
 from game.systems.mover import mover_system
@@ -51,6 +62,7 @@ from game.systems.player_control import player_control_system
 from game.systems.player_weapon_input import player_weapon_input_system
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
+from game.systems.spawner import spawner_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
@@ -64,18 +76,17 @@ class Game:
 
         self.settings = DEFAULT_SETTINGS
 
-        # Window
+        # --- Window ---
         self.screen = pygame.display.set_mode(self.settings.window_size)
-
         pygame.display.set_caption(self.settings.window_title)
 
-        # Timing
+        # --- Timing ---
         self.clock = pygame.time.Clock()
 
-        # ECS
+        # --- ECS ---
         self.world = World()
 
-        # Resources
+        # --- Resources ---
         self.world.add_resource(Camera(self.settings.window_size))
         self.world.add_resource(InputState())
         self.world.add_resource(EventBus())
@@ -83,7 +94,7 @@ class Game:
         self.world.add_resource(UIState())
         self.world.add_resource(MysteryBoxSession())
 
-        # Entities
+        # --- Entities ---
         player_verts = (
             pygame.Vector2(-15, -15),
             pygame.Vector2(10, -15),
@@ -112,7 +123,7 @@ class Game:
             ),
         )
 
-        # Map
+        # --- Map ---
         spawns = load_map(
             self.world,
             Path(__file__).parent.parent / "assets" / "maps" / "level1.txt",
@@ -121,15 +132,9 @@ class Game:
 
         self.world.get_component(self.player, Transform).position = spawns.player
         self.world.get_resource(Camera).center_on(spawns.player)
+        self._setup_map_objects(spawns)
 
-        box_spawn = spawns.mystery_box
-        if box_spawn is None:
-            box_spawn = random.choice(
-                self.world.get_resource(MapLayout).spawnable_tiles()
-            )
-        self.mystery_box = spawn_mystery_box(self.world, box_spawn)
-
-        # UI
+        # --- UI ---
         self.world.create_entity(
             UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -16), size=(160, 36)),
             UILabel(""),
@@ -160,7 +165,13 @@ class Game:
             InteractPromptLabel(),
         )
 
-        # Game state
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0), pivot=(0.5, 0), offset=(0, 12), size=(500, 24)),
+            UILabel("", 18),
+            BuffStatusLabel(),
+        )
+
+        # --- Game state ---
         self.running = True
         self.events: list[pygame.event.Event] = []
 
@@ -175,9 +186,12 @@ class Game:
         self.world.get_resource(EventBus).clear()
 
         input_system(self.world, self.events)
+        buff_tick_system(self.world, dt)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
+
         mystery_box_system(self.world, dt)
+        spawner_system(self.world, dt)
 
         camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
@@ -197,14 +211,22 @@ class Game:
         physics_system(self.world, dt)
         collision_system(self.world)
 
+        dash_impact_system(self.world)
         charger_ai_collision_system(self.world)
 
         projectile_system(self.world, dt)
 
         health_system(self.world)
+        bounty_system(self.world)
+
+        breakable_system(self.world)
+        buff_drop_system(self.world)
+        break_cleanup_system(self.world)
+        death_cleanup_system(self.world)
 
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
+        buff_hud_system(self.world)
 
         # UI created this frame (e.g. the mystery box menu) needs its rect before rendering.
         ui_layout_system(self.world)
@@ -228,6 +250,33 @@ class Game:
             self.render()
 
         pygame.quit()
+
+    def _setup_map_objects(self, spawns: MapSpawns):
+        # Crates: only about half the spots start occupied, so the spawner has
+        # free spots to use. One crate fits per spot, so that is also the cap.
+        points = spawns.crates
+        initial = random.sample(points, (len(points) + 1) // 2)
+        crates = [spawn_crate(self.world, pos) for pos in initial]
+        self.world.create_entity(
+            Spawner(
+                points=points,
+                spawn=spawn_crate,
+                interval=CRATE_INTERVAL,
+                max_alive=max(1, len(points)),
+                spawned=crates,
+            )
+        )
+
+        # Mystery box: one box that hops between the map's `M` spots. Maps
+        # without any `M` tile get a single box a few tiles from the player.
+        box_points = spawns.mystery_boxes or [
+            spawns.player + pygame.Vector2(3 * TILE_SIZE, 0)
+        ]
+        self.mystery_box = spawn_mystery_box(self.world, random.choice(box_points))
+        self.world.add_component(
+            self.mystery_box,
+            Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
+        )
 
 
 def main():

@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 
 from game.components.loadout import Rarity
@@ -25,3 +26,10 @@ PLAIN_COLOR = (255, 255, 255)
 
 def rarity_color(rarity: Rarity | None):
     return PLAIN_COLOR if rarity is None else RARITIES[rarity].color
+
+
+def roll_rarity(rng: random.Random | None = None) -> Rarity:
+    """Rarity weighted by RARITIES."""
+    rng = rng or random.Random()
+    tiers = list(RARITIES)
+    return rng.choices(tiers, weights=[RARITIES[t].weight for t in tiers])[0]

@@ -1,12 +1,14 @@
 import math
 import random
 
+from game.components.buffs import Stat
 from game.components.loadout import FireMode, Gun, Loadout
 from game.components.transform import Transform
 from game.components.weapon_intent import WeaponIntent
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.prefabs.gun_projectile import spawn_gun_projectile
+from game.util.buffs import stat_multiplier
 
 
 def weapon_system(world: World, dt: float):
@@ -67,10 +69,16 @@ def _fire(
     gun.cooldown = 1.0 / spec.fire_rate
 
     origin = transform.apply(loadout.muzzle)
+    damage_scale = stat_multiplier(world, shooter, Stat.DAMAGE)
     for _ in range(spec.pellets):
         deviation = math.radians(random.uniform(-spec.spread, spec.spread))
         spawn_gun_projectile(
-            world, shooter, origin, transform.rotation + deviation, spec
+            world,
+            shooter,
+            origin,
+            transform.rotation + deviation,
+            spec,
+            damage_scale,
         )
 
     # Auto-reload when the magazine runs dry.

@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 
 from game.components.loadout import Gun, GunSpec, Rarity
 from game.constants.guns import ALL_GUNS
-from game.constants.rarity import RARITIES
+from game.constants.rarity import RARITIES, roll_rarity
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +82,4 @@ def roll_gun(rng: random.Random | None = None) -> tuple[GunSpec, Rarity]:
     """Uniform gun type, rarity weighted by RARITIES."""
     rng = rng or random.Random()
     spec = rng.choice(list(ALL_GUNS.values()))
-    tiers = list(RARITIES)
-    rarity = rng.choices(tiers, weights=[RARITIES[t].weight for t in tiers])[0]
-    return spec, rarity
+    return spec, roll_rarity(rng)

@@ -18,6 +18,7 @@ def spawn_gun_projectile(
     origin: pygame.Vector2,
     angle: float,
     spec: GunSpec,
+    damage_scale: float = 1.0,
 ):
     length, width = spec.projectile_size
     hl, hw = length / 2, width / 2
@@ -37,7 +38,7 @@ def spawn_gun_projectile(
         ConvexCollider(vertices=vertices, bounciness=0.0, is_trigger=True),
         Projectile(
             owner=shooter,
-            damage=spec.damage,
+            damage=spec.damage * damage_scale,
             lifetime=spec.max_range / spec.projectile_speed,
             pierce_left=spec.pierce,
             knockback=spec.knockback,
