@@ -42,5 +42,7 @@ def spawn_gun_projectile(
             lifetime=spec.max_range / spec.projectile_speed,
             pierce_left=spec.pierce,
             knockback=spec.knockback,
+            crit_chance=spec.crit_chance,
+            crit_multiplier=spec.crit_multiplier,
         ),
     )

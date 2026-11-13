@@ -8,6 +8,17 @@ class DamageEvent:
     target: Entity
     amount: float
     source: Entity | None = None
+    critical: bool = False
+
+
+@dataclass(slots=True)
+class DamageTakenEvent:
+    """Damage that reached an entity's Health (i.e. not blocked by immunity).
+    Bonus health may still have absorbed some or all of it."""
+
+    target: Entity
+    amount: float
+    critical: bool = False
 
 
 @dataclass(slots=True)

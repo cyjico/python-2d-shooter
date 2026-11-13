@@ -2,7 +2,7 @@ from game.components.buffs import Flag
 from game.components.health import Health
 from game.components.player import Player
 from game.core_ecs.world import World
-from game.events.combat import DamageEvent, EntityDiedEvent
+from game.events.combat import DamageEvent, DamageTakenEvent, EntityDiedEvent
 from game.resources.event_bus import EventBus
 from game.util.buffs import absorb_damage, has_flag
 
@@ -18,6 +18,8 @@ def health_system(world: World):
 
         if has_flag(world, damage.target, Flag.IMMUNE):
             continue
+
+        events.emit(DamageTakenEvent(damage.target, damage.amount, damage.critical))
 
         # Bonus health soaks first; only the overflow reaches real health.
         amount = absorb_damage(world, damage.target, damage.amount)
