@@ -110,8 +110,6 @@ def charger_ai_system(world: World, dt: float):
 
         toward = targ_transform.position - transform.position
 
-        print(shape.color)
-
         match charger.state:
             # HOVER -> WINDUP -> CHARGE -> (hits wall) -> STUNNED -> HOVER
             case ChargerAIState.HOVER:
