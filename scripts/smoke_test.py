@@ -3,12 +3,127 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
+import pygame
+
+from game.components.loadout import Loadout, Rarity
+from game.components.mystery_box import MysteryBox
+from game.components.transform import Transform
+from game.components.wallet import Wallet
+from game.constants.gun_buffs import buffed_spec
+from game.constants.guns import ALL_GUNS
 from game.game import Game
+from game.resources.map_layout import MapLayout
+from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 
 game = Game()
-for _ in range(120):  # about 2 seconds of game time
-    game.handle_events()
-    game.update(1 / 60)
-    game.render()
+
+
+def step(frames: int = 1):
+    for _ in range(frames):
+        game.handle_events()
+        game.update(1 / 60)
+        game.render()
+
+
+def press(key: int):
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=key))
+    step()
+
+
+def wait_for_offer():
+    for _ in range(120):
+        if session.phase is BoxPhase.OFFER:
+            return
+        step()
+    raise AssertionError(f"Box never finished rolling (phase {session.phase})")
+
+
+def stand_next_to_box():
+    box_pos = game.world.get_component(game.mystery_box, Transform).position
+    player = game.world.get_component(game.player, Transform)
+    player.position = box_pos + pygame.Vector2(45, 0)
+    step()
+
+
+step(120)  # about 2 seconds of game time
+
+world = game.world
+session = world.get_resource(MysteryBoxSession)
+loadout = world.get_component(game.player, Loadout)
+wallet = world.get_component(game.player, Wallet)
+box = world.get_component(game.mystery_box, MysteryBox)
+
+# Every gun x rarity builds a valid, never-weaker spec.
+for base in ALL_GUNS.values():
+    for rarity in Rarity:
+        spec = buffed_spec(base, rarity)
+        assert spec.id == base.id
+        assert spec.damage >= base.damage and spec.fire_rate >= base.fire_rate
+        assert spec.magazine_size >= base.magazine_size
+        assert spec.pellets >= base.pellets and spec.pierce >= base.pierce
+
+# Pistol-only start, 800 money, box costs 200.
+assert [g.spec.id for g in loadout.slots] == ["pistol"], loadout.slots
+assert wallet.balance == 800 and box.price == 200
+
+# Open the box.
+stand_next_to_box()
+press(pygame.K_e)
+assert session.phase is BoxPhase.ROLLING and wallet.balance == 600
+wait_for_offer()
+
+# Reroll costs 200 more.
+press(pygame.K_r)
+assert session.phase is BoxPhase.ROLLING and wallet.balance == 200, wallet.balance
+assert box.price == 400
+wait_for_offer()
+
+# Take with one gun: new gun becomes primary, pistol moves to secondary.
+offered = session.offer
+old_box_pos = pygame.Vector2(world.get_component(game.mystery_box, Transform).position)
+press(pygame.K_e)
+assert session.phase is BoxPhase.CLOSED
+assert loadout.slots[0] is offered and loadout.active == 0
+assert loadout.slots[1].spec.id == "pistol" and loadout.slots[1].rarity is None
+assert box.price == 570, box.price  # (400 + 200) * 0.95
+
+new_box_pos = world.get_component(game.mystery_box, Transform).position
+assert new_box_pos.distance_to(old_box_pos) >= 240
+assert new_box_pos in world.get_resource(MapLayout).spawnable_tiles()
+
+# Number keys switch slots.
+press(pygame.K_2)
+assert loadout.active == 1
+press(pygame.K_1)
+assert loadout.active == 0
+
+# Full slots: taking asks which slot to replace.
+wallet.balance = 10_000
+stand_next_to_box()
+press(pygame.K_e)
+wait_for_offer()
+offered = session.offer
+primary = loadout.slots[0]
+press(pygame.K_e)
+assert session.phase is BoxPhase.CHOOSE_SLOT
+press(pygame.K_ESCAPE)  # back
+assert session.phase is BoxPhase.OFFER
+press(pygame.K_e)
+press(pygame.K_2)
+assert session.phase is BoxPhase.CLOSED
+assert loadout.slots == [primary, offered] and loadout.active == 1
+assert box.price == round((570 + 200) * 0.95)
+
+# Walking away loses the gun and steps the price.
+stand_next_to_box()
+price = box.price
+press(pygame.K_e)
+wait_for_offer()
+press(pygame.K_ESCAPE)
+assert session.phase is BoxPhase.CLOSED
+assert loadout.slots == [primary, offered]
+assert box.price == price + 200
+
+step(60)
 
 print("Smoke test passed")
