@@ -7,14 +7,22 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import pygame
 
+from game.components.bounty import Bounty
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.transform import Transform
 from game.components.wallet import Wallet
+from game.constants.buffs import MONEY_BOOSTS
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
+from game.events.combat import DamageEvent
 from game.game import Game
+from game.prefabs.enemies import spawn_charger
+from game.resources.event_bus import EventBus
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.systems.bounty import bounty_system
+from game.systems.health import death_cleanup_system, health_system
+from game.util.buffs import grant_buff
 
 game = Game()
 
@@ -125,6 +133,30 @@ press(pygame.K_ESCAPE)
 assert session.phase is BoxPhase.CLOSED
 assert loadout.slots == [primary, offered]
 assert box.price == price + 200
+
+
+# Kills pay the killer's wallet, scaled by the money buff.
+def kill_charger():
+    enemy = spawn_charger(world, pygame.Vector2(0, 0), game.player)
+    bounty = world.get_component(enemy, Bounty).amount
+    bus = world.get_resource(EventBus)
+    bus.clear()
+    bus.emit(DamageEvent(enemy, 1e9, game.player))
+    health_system(world)
+    bounty_system(world)
+    death_cleanup_system(world)
+    assert not world.is_alive(enemy)
+    return bounty
+
+
+before = wallet.balance
+bounty = kill_charger()
+assert wallet.balance == before + bounty, wallet.balance
+
+grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
+before = wallet.balance
+bounty = kill_charger()
+assert wallet.balance == before + round(bounty * 1.75), wallet.balance
 
 step(60)
 

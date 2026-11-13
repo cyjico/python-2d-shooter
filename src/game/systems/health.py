@@ -30,6 +30,10 @@ def health_system(world: World):
         if was_alive and health.current <= 0:
             events.emit(EntityDiedEvent(damage.target, damage.source))
 
-            # TODO: player death should be game-over.
-            if not world.has_component(damage.target, Player):
-                world.destroy_entity(damage.target)
+
+def death_cleanup_system(world: World):
+    """Destroys what died. Run last, so reward systems can still read its components."""
+    for died in world.get_resource(EventBus).read(EntityDiedEvent):
+        # TODO: player death should be game-over.
+        if world.is_alive(died.entity) and not world.has_component(died.entity, Player):
+            world.destroy_entity(died.entity)

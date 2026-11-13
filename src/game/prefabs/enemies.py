@@ -3,6 +3,7 @@ import pygame
 from game.components.ai import AI
 from game.components.ai.charger import ChargerAI
 from game.components.ai.hover_around_target import HoverAroundTargetAI
+from game.components.bounty import Bounty
 from game.components.convex_collider import ConvexCollider
 from game.components.enemy import Enemy
 from game.components.health import Health
@@ -15,6 +16,7 @@ from game.core_ecs.world import World
 from game.util.geometry import regular_polygon
 
 CHARGER_RADIUS = 16
+CHARGER_BOUNTY = 40
 
 
 def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
@@ -30,6 +32,7 @@ def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
         HoverAroundTargetAI(),
         Mover(move_speed=150),
         Health(maximum=60),
+        Bounty(CHARGER_BOUNTY),
         RigidBody(
             mass=mass,
             drag=0.4,

@@ -8,6 +8,7 @@ class Stat(Enum):
 
     MOVE_SPEED = auto()
     DAMAGE = auto()
+    MONEY = auto()
 
 
 class Flag(Enum):
