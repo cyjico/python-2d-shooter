@@ -31,3 +31,8 @@ class MysteryBoxUI:
 @dataclass(slots=True)
 class BuffStatusLabel:
     """Marks a UILabel that lists the player's active buffs."""
+
+
+@dataclass(slots=True)
+class StaminaGauge:
+    """Marks a UIGauge that shows the player's stamina."""

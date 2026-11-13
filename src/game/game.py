@@ -6,13 +6,14 @@ import pygame
 
 from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
-from game.components.dash import Dash
+from game.components.dash import Dash, DashIntent
 from game.components.health import Health
 from game.components.hud import (
     BuffStatusLabel,
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
+    StaminaGauge,
     WeaponStatusLabel,
 )
 from game.components.loadout import Gun, Loadout
@@ -22,8 +23,9 @@ from game.components.relocatable import Relocatable
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.components.shape import Shape
 from game.components.spawner import Spawner
+from game.components.stamina import Stamina
 from game.components.transform import Transform
-from game.components.ui import UILabel, UIPanel, UIRect
+from game.components.ui import UIGauge, UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL
@@ -59,10 +61,13 @@ from game.systems.mover import mover_system
 from game.systems.mystery_box import mystery_box_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
+from game.systems.player_dash_input import player_dash_input_system
 from game.systems.player_weapon_input import player_weapon_input_system
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
 from game.systems.spawner import spawner_system
+from game.systems.stamina import stamina_system
+from game.systems.stamina_hud import stamina_hud_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
@@ -107,11 +112,12 @@ class Game:
             Player(),
             Health(maximum=100),
             Loadout(slots=[Gun.full(PISTOL)]),
-            Wallet(balance=800),
             WeaponIntent(),
-            CameraTarget(),
+            Wallet(balance=800),
             Mover(),
             Dash(),
+            DashIntent(),
+            Stamina(segments=2),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
             Transform(rotation=math.radians(45), scale=(1, 1)),
             Shape(
@@ -121,6 +127,7 @@ class Game:
             ConvexCollider(
                 vertices=player_verts,
             ),
+            CameraTarget(),
         )
 
         # --- Map ---
@@ -171,6 +178,12 @@ class Game:
             BuffStatusLabel(),
         )
 
+        self.world.create_entity(
+            UIRect(anchor=(0, 1), pivot=(0, 1), offset=(16, -16), size=(180, 16)),
+            UIGauge(segments=2),
+            StaminaGauge(),
+        )
+
         # --- Game state ---
         self.running = True
         self.events: list[pygame.event.Event] = []
@@ -187,6 +200,7 @@ class Game:
 
         input_system(self.world, self.events)
         buff_tick_system(self.world, dt)
+        stamina_system(self.world, dt)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
 
@@ -196,6 +210,7 @@ class Game:
         camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
+        player_dash_input_system(self.world)
 
         charger_ai_system(self.world, dt)
 
@@ -226,6 +241,7 @@ class Game:
 
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
+        stamina_hud_system(self.world)
         buff_hud_system(self.world)
 
         # UI created this frame (e.g. the mystery box menu) needs its rect before rendering.
