@@ -134,10 +134,10 @@ def solve_sat(
     """Separating Axis Theorem test between two convex polygons in world space.
 
     Args:
-        points_a (Sequence[pygame.Vector2]): _description_
-        centroid_a (pygame.Vector2): _description_
-        points_b (Sequence[pygame.Vector2]): _description_
-        centroid_b (pygame.Vector2): _description_
+        points_a (Sequence[pygame.Vector2]): Points of convex polygon A.
+        centroid_a (pygame.Vector2): Centroid of convex polygon A.
+        points_b (Sequence[pygame.Vector2]): Points of convex polygon B.
+        centroid_b (pygame.Vector2): Centroid of convex polygon B.
 
     Returns:
         None: Returned if they don't overlap.
