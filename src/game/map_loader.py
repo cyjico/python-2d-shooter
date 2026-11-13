@@ -83,10 +83,10 @@ def _spawn_merged_walls(world: World, lines: list[str]):
 class MapSpawns:
     player: pygame.Vector2
     """World position of the player spawn."""
-    mystery_boxes: dict[tuple[float, float], bool]
-    """World position of the mystery boxes, if the map has one, ad if they're available."""
-    crates: dict[tuple[float, float], bool]
-    """World position of the crates, if the map has one, and if they're available."""
+    mystery_boxes: list[pygame.Vector2]
+    """World positions of every `M` tile."""
+    crates: list[pygame.Vector2]
+    """World positions of every `C` tile."""
 
 
 def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
@@ -97,8 +97,8 @@ def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
     _spawn_merged_walls(world, lines)
 
     player_spawn = None
-    mystery_boxes: dict[tuple[float, float], bool] = dict()
-    crates: dict[tuple[float, float], bool] = dict()
+    mystery_boxes: list[pygame.Vector2] = []
+    crates: list[pygame.Vector2] = []
 
     # `row` is the line number (y), `col` is the character number (x).
     for row, line in enumerate(lines):
@@ -113,9 +113,9 @@ def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
             if char == "P":
                 player_spawn = center
             elif char == "C":
-                crates[(center.x, center.y)] = True
+                crates.append(center)
             elif char == "M":
-                mystery_boxes[(center.x, center.y)] = True
+                mystery_boxes.append(center)
             elif char in ENEMY_SPAWNERS:
                 ENEMY_SPAWNERS[char](world, center, player)
             # Anything else (like ".") is empty floor.

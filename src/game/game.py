@@ -19,14 +19,22 @@ from game.components.mover import Mover
 from game.components.player import Player
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.components.shape import Shape
+from game.components.spawner import Spawner
 from game.components.transform import Transform
 from game.components.ui import UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL
+from game.constants.spawning import (
+    BOX_INTERVAL,
+    BOX_MAX_ALIVE,
+    CRATE_INTERVAL,
+    CRATE_MAX_PER_SPOT,
+)
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
-from game.map_loader import load_map
+from game.map_loader import MapSpawns, load_map
+from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
@@ -51,6 +59,7 @@ from game.systems.player_control import player_control_system
 from game.systems.player_weapon_input import player_weapon_input_system
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
+from game.systems.spawner import spawner_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
@@ -64,18 +73,17 @@ class Game:
 
         self.settings = DEFAULT_SETTINGS
 
-        # Window
+        # --- Window ---
         self.screen = pygame.display.set_mode(self.settings.window_size)
-
         pygame.display.set_caption(self.settings.window_title)
 
-        # Timing
+        # --- Timing ---
         self.clock = pygame.time.Clock()
 
-        # ECS
+        # --- ECS ---
         self.world = World()
 
-        # Resources
+        # --- Resources ---
         self.world.add_resource(Camera(self.settings.window_size))
         self.world.add_resource(InputState())
         self.world.add_resource(EventBus())
@@ -83,7 +91,7 @@ class Game:
         self.world.add_resource(UIState())
         self.world.add_resource(MysteryBoxSession())
 
-        # Entities
+        # --- Entities ---
         player_verts = (
             pygame.Vector2(-15, -15),
             pygame.Vector2(10, -15),
@@ -112,7 +120,7 @@ class Game:
             ),
         )
 
-        # Map
+        # --- Map ---
         spawns = load_map(
             self.world,
             Path(__file__).parent.parent / "assets" / "maps" / "level1.txt",
@@ -121,8 +129,9 @@ class Game:
 
         self.world.get_component(self.player, Transform).position = spawns.player
         self.world.get_resource(Camera).center_on(spawns.player)
+        self._setup_spawners(spawns)
 
-        # UI
+        # --- UI ---
         self.world.create_entity(
             UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -16), size=(160, 36)),
             UILabel(""),
@@ -170,7 +179,9 @@ class Game:
         input_system(self.world, self.events)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
+
         mystery_box_system(self.world, dt)
+        spawner_system(self.world, dt)
 
         camera_follow_system(self.world, dt)
         player_control_system(self.world, dt)
@@ -221,6 +232,35 @@ class Game:
             self.render()
 
         pygame.quit()
+
+    def _setup_spawners(self, spawns: MapSpawns):
+        # The map's crates and one box exist from the start; spawners add more later.
+        crates = [spawn_crate(self.world, pos) for pos in spawns.crates]
+        self.world.create_entity(
+            Spawner(
+                points=spawns.crates,
+                spawn=spawn_crate,
+                interval=CRATE_INTERVAL,
+                max_alive=max(1, len(spawns.crates) * CRATE_MAX_PER_SPOT),
+                spawned=crates,
+            )
+        )
+
+        boxes = []
+        if spawns.mystery_boxes:
+            self.mystery_box = spawn_mystery_box(
+                self.world, random.choice(spawns.mystery_boxes)
+            )
+            boxes.append(self.mystery_box)
+        self.world.create_entity(
+            Spawner(
+                points=spawns.mystery_boxes,
+                spawn=spawn_mystery_box,
+                interval=BOX_INTERVAL,
+                max_alive=BOX_MAX_ALIVE,
+                spawned=boxes,
+            )
+        )
 
 
 def main():
