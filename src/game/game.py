@@ -30,7 +30,6 @@ from game.constants.guns import PISTOL
 from game.constants.mystery_box import MIN_MOVE_DISTANCE
 from game.constants.spawning import (
     CRATE_INTERVAL,
-    CRATE_MAX_PER_SPOT,
 )
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
@@ -253,14 +252,17 @@ class Game:
         pygame.quit()
 
     def _setup_map_objects(self, spawns: MapSpawns):
-        # Crates: the map's crates exist from the start; the spawner adds more later.
-        crates = [spawn_crate(self.world, pos) for pos in spawns.crates]
+        # Crates: only about half the spots start occupied, so the spawner has
+        # free spots to use. One crate fits per spot, so that is also the cap.
+        points = spawns.crates
+        initial = random.sample(points, (len(points) + 1) // 2)
+        crates = [spawn_crate(self.world, pos) for pos in initial]
         self.world.create_entity(
             Spawner(
-                points=spawns.crates,
+                points=points,
                 spawn=spawn_crate,
                 interval=CRATE_INTERVAL,
-                max_alive=max(1, len(spawns.crates) * CRATE_MAX_PER_SPOT),
+                max_alive=max(1, len(points)),
                 spawned=crates,
             )
         )
