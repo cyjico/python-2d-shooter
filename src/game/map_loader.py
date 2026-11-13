@@ -89,7 +89,7 @@ class MapSpawns:
 
 
 def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
-    """Create entities for every tile in a text map and add a MapLayout resource."""
+    """Create entities for every tile in a text map and return its spawn points."""
     lines = path.read_text().splitlines()
 
     _spawn_merged_walls(world, lines)
