@@ -4,9 +4,9 @@ import pygame
 
 from game.components.ai import AI
 from game.components.ai.follow_target import FollowTargetAI
+from game.components.mover import Mover
 from game.components.transform import Transform
 from game.core_ecs.world import World
-from game.game import Mover
 from game.systems.ai.util import correct_want_dir
 from game.util.geometry import angle_of, rot_to_vec2
 

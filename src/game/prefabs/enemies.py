@@ -2,17 +2,16 @@ import pygame
 
 from game.components.ai import AI
 from game.components.ai.charger import ChargerAI
-from game.components.ai.follow_target import FollowTargetAI
 from game.components.ai.hover_around_target import HoverAroundTargetAI
+from game.components.convex_collider import ConvexCollider
 from game.components.enemy import Enemy
+from game.components.health import Health
 from game.components.mover import Mover
 from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-from game.game import ConvexCollider
-from game.systems.health import Health
 from game.util.geometry import regular_polygon
 
 CHARGER_RADIUS = 16

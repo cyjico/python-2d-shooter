@@ -1,8 +1,9 @@
 import pygame
 
+from game.components.convex_collider import ConvexCollider
+from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.world import World
-from game.game import ConvexCollider, RigidBody
 from game.util.geometry import get_aabb, segment_hits_aabb, segment_hits_polygon
 
 

@@ -8,6 +8,7 @@ from game.components.ai.hover_around_target import HoverAroundTargetAI
 from game.components.convex_collider import ConvexCollider
 from game.components.enemy import Enemy
 from game.components.health import Health
+from game.components.mover import Mover
 from game.components.player import Player
 from game.components.rigid_body import RigidBody
 from game.components.shape import Shape
@@ -16,7 +17,6 @@ from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.events.collision import CollisionEvent
 from game.events.combat import DamageEvent
-from game.game import Mover
 from game.resources.event_bus import EventBus
 from game.util.geometry import angle_of, rot_to_vec2
 

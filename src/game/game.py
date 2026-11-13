@@ -1,5 +1,6 @@
 import math
 import random
+from pathlib import Path
 
 import pygame
 
@@ -26,7 +27,7 @@ from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
 from game.map_loader import load_map
 from game.prefabs.mystery_box import spawn_mystery_box
-from game.resources.asset_store import AssetStore, Path
+from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
@@ -39,7 +40,7 @@ from game.systems.ai.hover_around_target import hover_around_target_ai_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
 from game.systems.dash import dash_system
-from game.systems.health import Health, health_system
+from game.systems.health import health_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
 from game.systems.mover import mover_system

@@ -5,7 +5,6 @@ import pygame
 
 from game.components.transform import Transform
 from game.core_ecs.world import World
-from game.game import ConvexCollider
 
 
 def get_aabb(
