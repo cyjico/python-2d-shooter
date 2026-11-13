@@ -34,7 +34,7 @@ def raycast_static_bundle(
         polygon = None
 
         for start, end in segments:
-            if not segment_hits_aabb(origin, end, get_aabb(transform, collider.laabb)):
+            if not segment_hits_aabb(start, end, get_aabb(transform, collider.laabb)):
                 continue
 
             if polygon is None:
