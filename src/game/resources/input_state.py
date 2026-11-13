@@ -14,3 +14,7 @@ class InputState:
     weapon_switch: int = 0
     dash_pressed: bool = False
     """-1 / 0 / +1, from the mouse wheel or Q."""
+    slot_pressed: int | None = None
+    """Loadout slot picked with the number keys this frame (1 -> 0, 2 -> 1)."""
+    interact_pressed: bool = False
+    cancel_pressed: bool = False
