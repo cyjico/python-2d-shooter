@@ -5,6 +5,7 @@ import pygame
 
 from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
+from game.components.dash import Dash
 from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
@@ -34,6 +35,7 @@ from game.resources.mystery_box_session import MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
+from game.systems.dash import dash_system
 from game.systems.health import Health, health_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
@@ -49,8 +51,6 @@ from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
 from game.systems.weapon import weapon_system
 from game.systems.weapon_status_hud import weapon_status_hud_system
-from game.components.dash import Dash
-from game.systems.dash import dash_system
 
 
 class Game:
