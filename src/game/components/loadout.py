@@ -4,56 +4,6 @@ from enum import Enum, auto
 import pygame
 
 
-@dataclass(slots=True)
-class Loadout:
-    """The guns an entity carries and which one is in hand."""
-
-    slots: list[Gun] = field(default_factory=list)
-    active: int = 0
-    max_slots: int = 2
-    muzzle: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(24, 0))
-    """Where projectiles spawn. Local to the entity's transform."""
-
-    @property
-    def equipped(self):
-        return self.slots[self.active] if self.slots else None
-
-    def equip(self, index: int):
-        """Put the gun in `index` in hand. Invalid or current indices do nothing."""
-        if not 0 <= index < len(self.slots) or index == self.active:
-            return
-        # Switching away cancels a reload in progress.
-        self.slots[self.active].reload_remaining = 0.0
-        self.active = index
-
-    def put_primary(self, gun: Gun):
-        """Make `gun` the primary (slot 0) and equip it. Other guns shift down.
-
-        Only valid while there is a free slot.
-        """
-        if len(self.slots) >= self.max_slots:
-            raise ValueError("No free slot; use replace() instead")
-        if self.slots:
-            self.slots[self.active].reload_remaining = 0.0
-        self.slots.insert(0, gun)
-        self.active = 0
-
-    def replace(self, index: int, gun: Gun) -> Gun:
-        """Swap the gun in `index` for `gun` and equip it. Returns the old gun."""
-        self.slots[self.active].reload_remaining = 0.0
-        replaced = self.slots[index]
-        self.slots[index] = gun
-        self.active = index
-        return replaced
-
-    def cycle(self, step: int):
-        if len(self.slots) < 2:
-            return
-        # Switching away cancels a reload in progress.
-        self.slots[self.active].reload_remaining = 0.0
-        self.active = (self.active + step) % len(self.slots)
-
-
 class Rarity(Enum):
     """Mystery box tiers, weakest to strongest."""
 
@@ -160,3 +110,53 @@ class Gun:
         self.magazine = self.spec.magazine_size
         self.reserve = self.spec.max_reserve
         self.reload_remaining = 0.0
+
+
+@dataclass(slots=True)
+class Loadout:
+    """The guns an entity carries and which one is in hand."""
+
+    slots: list[Gun] = field(default_factory=list)
+    active: int = 0
+    max_slots: int = 2
+    muzzle: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(24, 0))
+    """Where projectiles spawn. Local to the entity's transform."""
+
+    @property
+    def equipped(self):
+        return self.slots[self.active] if self.slots else None
+
+    def equip(self, index: int):
+        """Put the gun in `index` in hand. Invalid or current indices do nothing."""
+        if not 0 <= index < len(self.slots) or index == self.active:
+            return
+        # Switching away cancels a reload in progress.
+        self.slots[self.active].reload_remaining = 0.0
+        self.active = index
+
+    def put_primary(self, gun: Gun):
+        """Make `gun` the primary (slot 0) and equip it. Other guns shift down.
+
+        Only valid while there is a free slot.
+        """
+        if len(self.slots) >= self.max_slots:
+            raise ValueError("No free slot; use replace() instead")
+        if self.slots:
+            self.slots[self.active].reload_remaining = 0.0
+        self.slots.insert(0, gun)
+        self.active = 0
+
+    def replace(self, index: int, gun: Gun) -> Gun:
+        """Swap the gun in `index` for `gun` and equip it. Returns the old gun."""
+        self.slots[self.active].reload_remaining = 0.0
+        replaced = self.slots[index]
+        self.slots[index] = gun
+        self.active = index
+        return replaced
+
+    def cycle(self, step: int):
+        if len(self.slots) < 2:
+            return
+        # Switching away cancels a reload in progress.
+        self.slots[self.active].reload_remaining = 0.0
+        self.active = (self.active + step) % len(self.slots)

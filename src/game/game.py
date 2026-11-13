@@ -1,11 +1,13 @@
 import math
 import random
+from pathlib import Path
 
 import pygame
 
 from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash
+from game.components.health import Health
 from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
@@ -26,17 +28,20 @@ from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
 from game.map_loader import load_map
 from game.prefabs.mystery_box import spawn_mystery_box
-from game.resources.asset_store import AssetStore, Path
+from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.map_layout import MapLayout
 from game.resources.mystery_box_session import MysteryBoxSession
 from game.resources.ui_state import UIState
+from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
+from game.systems.ai.follow_target import follow_target_ai_system
+from game.systems.ai.hover_around_target import hover_around_target_ai_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
 from game.systems.dash import dash_system
-from game.systems.health import Health, health_system
+from game.systems.health import health_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
 from game.systems.mover import mover_system
@@ -78,19 +83,6 @@ class Game:
         self.world.add_resource(UIState())
         self.world.add_resource(MysteryBoxSession())
 
-        # Map
-        spawns = load_map(
-            self.world, Path(__file__).parent.parent / "assets" / "maps" / "level1.txt"
-        )
-        player_spawn = spawns.player
-
-        box_spawn = spawns.mystery_box
-        if box_spawn is None:
-            box_spawn = random.choice(
-                self.world.get_resource(MapLayout).spawnable_tiles()
-            )
-        self.mystery_box = spawn_mystery_box(self.world, box_spawn)
-
         # Entities
         player_verts = (
             pygame.Vector2(-15, -15),
@@ -102,6 +94,7 @@ class Game:
 
         self.player = self.world.create_entity(
             Player(),
+            Health(maximum=100),
             Loadout(slots=[Gun.full(PISTOL)]),
             Wallet(balance=800),
             WeaponIntent(),
@@ -109,7 +102,7 @@ class Game:
             Mover(),
             Dash(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
-            Transform(position=player_spawn, rotation=math.radians(45), scale=(1, 1)),
+            Transform(rotation=math.radians(45), scale=(1, 1)),
             Shape(
                 vertices=player_verts,
                 color=(255, 0, 120),
@@ -119,7 +112,22 @@ class Game:
             ),
         )
 
-        self.world.get_resource(Camera).center_on(player_spawn)
+        # Map
+        spawns = load_map(
+            self.world,
+            Path(__file__).parent.parent / "assets" / "maps" / "level1.txt",
+            self.player,
+        )
+
+        self.world.get_component(self.player, Transform).position = spawns.player
+        self.world.get_resource(Camera).center_on(spawns.player)
+
+        box_spawn = spawns.mystery_box
+        if box_spawn is None:
+            box_spawn = random.choice(
+                self.world.get_resource(MapLayout).spawnable_tiles()
+            )
+        self.mystery_box = spawn_mystery_box(self.world, box_spawn)
 
         # UI
         self.world.create_entity(
@@ -175,6 +183,12 @@ class Game:
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
 
+        charger_ai_system(self.world, dt)
+
+        # Generic AI Movement
+        follow_target_ai_system(self.world, dt)
+        hover_around_target_ai_system(self.world, dt)
+
         mover_system(self.world, dt)
         dash_system(self.world, dt)
 
@@ -183,7 +197,10 @@ class Game:
         physics_system(self.world, dt)
         collision_system(self.world)
 
+        charger_ai_collision_system(self.world)
+
         projectile_system(self.world, dt)
+
         health_system(self.world)
 
         weapon_status_hud_system(self.world)

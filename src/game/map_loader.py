@@ -7,7 +7,9 @@ from game.components.convex_collider import ConvexCollider
 from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from game.components.shape import Shape
 from game.components.transform import Transform
+from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from game.prefabs.enemies import spawn_charger
 from game.resources.map_layout import MapLayout
 
 TILE_SIZE = 40
@@ -17,6 +19,10 @@ WALL_COLOR = (90, 90, 110)
 CRATE_COLOR = (200, 200, 200)
 CRATE_SIZE = 30
 """Crates are a bit smaller than a tile so they fit through 1-tile gaps."""
+
+ENEMY_SPAWNERS = {
+    "X": spawn_charger,
+}
 
 
 def _box_vertices(width: float, height: float):
@@ -110,7 +116,7 @@ class MapSpawns:
     """World position of the mystery box (`M`), if the map has one."""
 
 
-def load_map(world: World, path: Path) -> MapSpawns:
+def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
     """Create entities for every tile in a text map and add a MapLayout resource."""
     lines = path.read_text().splitlines()
 
@@ -134,6 +140,8 @@ def load_map(world: World, path: Path) -> MapSpawns:
                 _spawn_crate(world, center)
             elif char == "P":
                 player_spawn = center
+            elif char in ENEMY_SPAWNERS:
+                ENEMY_SPAWNERS[char](world, center, player)
             elif char == "M":
                 box_spawn = center
             # Anything else (like ".") is empty floor.
