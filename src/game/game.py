@@ -9,6 +9,7 @@ from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash
 from game.components.health import Health
 from game.components.hud import (
+    BuffStatusLabel,
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
@@ -45,9 +46,12 @@ from game.resources.ui_state import UIState
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
+from game.systems.breakable import break_cleanup_system, breakable_system
+from game.systems.buff import buff_drop_system, buff_tick_system
+from game.systems.buff_hud import buff_hud_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
-from game.systems.dash import dash_system
+from game.systems.dash import dash_impact_system, dash_system
 from game.systems.health import health_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
@@ -161,7 +165,13 @@ class Game:
             InteractPromptLabel(),
         )
 
-        # Game state
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0), pivot=(0.5, 0), offset=(0, 12), size=(500, 24)),
+            UILabel("", 18),
+            BuffStatusLabel(),
+        )
+
+        # --- Game state ---
         self.running = True
         self.events: list[pygame.event.Event] = []
 
@@ -176,6 +186,7 @@ class Game:
         self.world.get_resource(EventBus).clear()
 
         input_system(self.world, self.events)
+        buff_tick_system(self.world, dt)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
 
@@ -200,14 +211,20 @@ class Game:
         physics_system(self.world, dt)
         collision_system(self.world)
 
+        dash_impact_system(self.world)
         charger_ai_collision_system(self.world)
 
         projectile_system(self.world, dt)
 
         health_system(self.world)
 
+        breakable_system(self.world)
+        buff_drop_system(self.world)
+        break_cleanup_system(self.world)
+
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
+        buff_hud_system(self.world)
 
         # UI created this frame (e.g. the mystery box menu) needs its rect before rendering.
         ui_layout_system(self.world)

@@ -14,3 +14,9 @@ class DamageEvent:
 class EntityDiedEvent:
     entity: Entity
     killer: Entity | None = None
+
+
+@dataclass(slots=True)
+class BrokenEvent:
+    entity: Entity
+    breaker: Entity

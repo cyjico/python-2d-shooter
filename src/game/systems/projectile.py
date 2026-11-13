@@ -1,3 +1,4 @@
+from game.components.breakable import Breakable
 from game.components.convex_collider import ConvexCollider
 from game.components.health import Health
 from game.components.projectile import Projectile
@@ -42,7 +43,7 @@ def _handle_hit(world: World, events: EventBus, bullet: Entity, other: Entity):
 
     projectile.hit.add(other)
 
-    if world.has_component(other, Health):
+    if world.has_component(other, Health) or world.has_component(other, Breakable):
         events.emit(DamageEvent(other, projectile.damage, projectile.owner))
 
     _apply_knockback(world, bullet, projectile, other)
