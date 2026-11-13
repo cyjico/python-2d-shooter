@@ -6,7 +6,9 @@ from game.components.convex_collider import ConvexCollider
 from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
 from game.components.shape import Shape
 from game.components.transform import Transform
+from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from game.prefabs.enemies import spawn_charger
 
 TILE_SIZE = 40
 """Width and height of one map character, in pixels."""
@@ -15,6 +17,10 @@ WALL_COLOR = (90, 90, 110)
 CRATE_COLOR = (200, 200, 200)
 CRATE_SIZE = 30
 """Crates are a bit smaller than a tile so they fit through 1-tile gaps."""
+
+ENEMY_SPAWNERS = {
+    "X": spawn_charger,
+}
 
 
 def _box_vertices(width: float, height: float):
@@ -100,7 +106,7 @@ def _spawn_crate(world: World, center: pygame.Vector2):
     )
 
 
-def load_map(world: World, path: Path) -> pygame.Vector2:
+def load_map(world: World, path: Path, player: Entity) -> pygame.Vector2:
     """Create entities for every tile in a text map.
 
     Returns:
@@ -126,6 +132,8 @@ def load_map(world: World, path: Path) -> pygame.Vector2:
                 _spawn_crate(world, center)
             elif char == "P":
                 player_spawn = center
+            elif char in ENEMY_SPAWNERS:
+                ENEMY_SPAWNERS[char](world, center, player)
             # Anything else (like ".") is empty floor.
 
     if player_spawn is None:

@@ -23,6 +23,9 @@ from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.ui_state import UIState
+from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
+from game.systems.ai.follow_target import follow_target_ai_system
+from game.systems.ai.hover_around_target import hover_around_target_ai_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
 from game.systems.health import Health, health_system
@@ -64,11 +67,6 @@ class Game:
         self.world.add_resource(AssetStore(Path(__file__).parent / "assets"))
         self.world.add_resource(UIState())
 
-        # Map
-        player_spawn = load_map(
-            self.world, Path(__file__).parent.parent / "assets" / "maps" / "level1.txt"
-        )
-
         # Entities
         player_verts = (
             pygame.Vector2(-15, -15),
@@ -85,7 +83,7 @@ class Game:
             CameraTarget(),
             Mover(),
             RigidBody(inertia=inertia_of_box(1.0, 30, 30)),
-            Transform(position=player_spawn, rotation=math.radians(45), scale=(1, 1)),
+            Transform(rotation=math.radians(45), scale=(1, 1)),
             Shape(
                 vertices=player_verts,
                 color=(255, 0, 120),
@@ -95,6 +93,14 @@ class Game:
             ),
         )
 
+        # Map
+        player_spawn = load_map(
+            self.world,
+            Path(__file__).parent.parent / "assets" / "maps" / "level1.txt",
+            self.player,
+        )
+
+        self.world.get_component(self.player, Transform).position = player_spawn
         self.world.get_resource(Camera).center_on(player_spawn)
 
         # UI
@@ -126,6 +132,12 @@ class Game:
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
 
+        charger_ai_system(self.world, dt)
+
+        # Generic AI Movement
+        follow_target_ai_system(self.world, dt)
+        hover_around_target_ai_system(self.world, dt)
+
         mover_system(self.world, dt)
 
         weapon_system(self.world, dt)
@@ -133,7 +145,10 @@ class Game:
         physics_system(self.world, dt)
         collision_system(self.world)
 
+        charger_ai_collision_system(self.world)
+
         projectile_system(self.world, dt)
+
         health_system(self.world)
 
         weapon_status_hud_system(self.world)
