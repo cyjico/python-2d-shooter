@@ -1,28 +1,26 @@
 import os
-
-from game.components.relocatable import Relocatable
-
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-os.environ["SDL_AUDIODRIVER"] = "dummy"
+from dataclasses import replace
 
 import pygame
 
 from game.components.bounty import Bounty
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
+from game.components.relocatable import Relocatable
 from game.components.transform import Transform
 from game.components.wallet import Wallet
 from game.constants.buffs import MONEY_BOOSTS
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
-from game.events.combat import DamageEvent
 from game.game import Game
 from game.prefabs.enemies import spawn_charger
-from game.resources.event_bus import EventBus
+from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
-from game.systems.bounty import bounty_system
 from game.systems.health import death_cleanup_system, health_system
 from game.util.buffs import grant_buff
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 game = Game()
 
@@ -135,16 +133,22 @@ assert loadout.slots == [primary, offered]
 assert box.price == price + 200
 
 
+KILL_SPOT = pygame.Vector2(260, 220)
+"""Open floor away from walls, the boxes and the player's spawn."""
+
+
 # Kills pay the killer's wallet, scaled by the money buff.
 def kill_charger():
-    enemy = spawn_charger(world, pygame.Vector2(0, 0), game.player)
+    enemy = spawn_charger(world, KILL_SPOT, game.player)
     bounty = world.get_component(enemy, Bounty).amount
-    bus = world.get_resource(EventBus)
-    bus.clear()
-    bus.emit(DamageEvent(enemy, 1e9, game.player))
-    health_system(world)
-    bounty_system(world)
-    death_cleanup_system(world)
+
+    # A near-stationary, lethal bullet on top of the charger. Damage, bounty and
+    # cleanup all run through Game.update, so a missing system fails the test.
+    slow_pistol = replace(ALL_GUNS["pistol"], projectile_speed=1.0)
+    spawn_gun_projectile(
+        world, game.player, KILL_SPOT, 0.0, slow_pistol, damage_scale=1e9
+    )
+    step()
     assert not world.is_alive(enemy)
     return bounty
 
