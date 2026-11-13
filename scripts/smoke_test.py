@@ -18,6 +18,7 @@ from game.game import Game
 from game.prefabs.enemies import spawn_charger
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.resources.ui_state import UIState
 from game.systems.health import death_cleanup_system, health_system
 from game.util.buffs import grant_buff
 
@@ -61,6 +62,7 @@ session = world.get_resource(MysteryBoxSession)
 loadout = world.get_component(game.player, Loadout)
 wallet = world.get_component(game.player, Wallet)
 box = world.get_component(game.mystery_box, MysteryBox)
+ui_state = world.get_resource(UIState)
 
 # Every gun x rarity builds a valid, never-weaker spec.
 for base in ALL_GUNS.values():
@@ -79,6 +81,7 @@ assert wallet.balance == 800 and box.price == 200
 stand_next_to_box()
 press(pygame.K_e)
 assert session.phase is BoxPhase.ROLLING and wallet.balance == 600
+assert ui_state.blocks_gameplay_input
 wait_for_offer()
 
 # Reroll costs 200 more.
@@ -92,6 +95,7 @@ offered = session.offer
 old_box_pos = pygame.Vector2(world.get_component(game.mystery_box, Transform).position)
 press(pygame.K_e)
 assert session.phase is BoxPhase.CLOSED
+assert not ui_state.blocks_gameplay_input
 assert loadout.slots[0] is offered and loadout.active == 0
 assert loadout.slots[1].spec.id == "pistol" and loadout.slots[1].rarity is None
 assert box.price == 570, box.price  # (400 + 200) * 0.95
