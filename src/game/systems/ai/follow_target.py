@@ -1,14 +1,10 @@
-import math
-
-import pygame
-
 from game.components.ai import AI
 from game.components.ai.follow_target import FollowTargetAI
 from game.components.mover import Mover
 from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.systems.ai.util import correct_want_dir
-from game.util.geometry import angle_of, rot_to_vec2
+from game.util.geometry import angle_of
 
 
 def follow_target_ai_system(world: World, dt: float):
@@ -20,14 +16,15 @@ def follow_target_ai_system(world: World, dt: float):
         if ai.target is None:
             continue
 
-        targ_transform = world.get_component(ai.target, Transform)
+        toward = world.get_component(ai.target, Transform).position - transform.position
+        if toward.length_squared() == 0:
+            mover.move_dir.update()
+            continue
 
         final_want_dir = correct_want_dir(
-            world,
-            ai,
-            transform.position,
-            (targ_transform.position - transform.position).normalize(),
+            world, ai, transform.position, toward.normalize()
         )
 
-        mover.face_angle = angle_of(final_want_dir)
+        if final_want_dir.length_squared() > 0:
+            mover.face_angle = angle_of(final_want_dir)
         mover.move_dir = final_want_dir
