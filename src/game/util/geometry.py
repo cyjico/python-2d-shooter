@@ -4,6 +4,8 @@ from typing import Sequence
 import pygame
 
 from game.components.transform import Transform
+from game.core_ecs.world import World
+from game.game import ConvexCollider
 
 
 def get_aabb(
@@ -11,7 +13,16 @@ def get_aabb(
     laabb: tuple[pygame.Vector2, pygame.Vector2],
 ):
     """Returns the axis-aligned bounding box based on the **local** axis-aligned
-    bounding box."""
+    bounding box.
+
+    Args:
+        transform (Transform): Transform to apply to the local axis-aligned bounding box.
+        laabb (tuple[pygame.Vector2, pygame.Vector2]): Local axis-aligned bounding box to base on.
+
+    Returns:
+        tuple[float, float, float, float]: Values are as follows: min x, min y, max x, max y.
+    """
+
     obb = transform.apply_all(
         [
             laabb[0],
@@ -160,3 +171,73 @@ def solve_sat(
         best_axis = -best_axis
 
     return best_axis, min_depth
+
+
+def regular_polygon(sides: int, radius: float):
+    """Vertices of a regular polygon centred on (0, 0).
+
+    The first vertex points along +x, which is an entity's "forward".
+    """
+    return tuple(
+        pygame.Vector2(math.cos(math.tau * i / sides), math.sin(math.tau * i / sides))
+        * radius
+        for i in range(sides)
+    )
+
+
+def segment_hits_polygon(
+    start: pygame.Vector2, end: pygame.Vector2, polygon: list[pygame.Vector2]
+):
+    """Cyrus-Beck clipping: does the segment touch this convex polygon?"""
+    delta = end - start
+
+    # Winding sign, so every edge normal can be made to point outward.
+    winding = sum(a.cross(b) for a, b in zip(polygon, polygon[1:] + polygon[:1]))
+    sign = 1.0 if winding > 0 else -1.0
+
+    t_in, t_out = 0.0, 1.0
+    for i, a in enumerate(polygon):
+        edge = polygon[(i + 1) % len(polygon)] - a
+        normal = pygame.Vector2(edge.y, -edge.x) * sign
+
+        dist = normal.dot(start - a)  # > 0 means outside this edge
+        speed = normal.dot(delta)
+
+        if speed == 0:
+            if dist > 0:
+                return False
+            continue
+
+        t = -dist / speed
+        if speed < 0:
+            t_in = max(t_in, t)
+        else:
+            t_out = min(t_out, t)
+
+        if t_in > t_out:
+            return False
+
+    return True
+
+
+def segment_hits_aabb(
+    start: pygame.Vector2,
+    end: pygame.Vector2,
+    aabb: tuple[float, float, float, float],
+) -> bool:
+    x1, y1, x2, y2 = aabb
+
+    return not (
+        max(start.x, end.x) < x1
+        or min(start.x, end.x) > x2
+        or max(start.y, end.y) < y1
+        or min(start.y, end.y) > y2
+    )
+
+
+def angle_of(vec2: pygame.Vector2):
+    return math.atan2(vec2.y, vec2.x)
+
+
+def rot_to_vec2(rot: float):
+    return pygame.Vector2(math.cos(rot), math.sin(rot))
