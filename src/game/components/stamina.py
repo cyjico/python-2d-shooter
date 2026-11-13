@@ -16,10 +16,10 @@ class Stamina:
     def __post_init__(self):
         self.current = float(self.segments)
 
-    @property
-    def fraction(self):
+    def fraction(self, bonus_segments: int):
         """0..1 fill level."""
-        return self.current / self.segments if self.segments > 0 else 0.0
+        maximum = self.segments + bonus_segments
+        return self.current / maximum if maximum > 0 else 0.0
 
     def can_afford(self, amount: float):
         return self.current >= amount
@@ -31,5 +31,8 @@ class Stamina:
         self.current -= amount
         return True
 
-    def regen(self, dt: float):
-        self.current = min(float(self.segments), self.current + self.regen_rate * dt)
+    def regen(self, bonus_segments: int, regen_multiplier: float, dt: float):
+        self.current = min(
+            float(self.segments + bonus_segments),
+            self.current + self.regen_rate * regen_multiplier * dt,
+        )
