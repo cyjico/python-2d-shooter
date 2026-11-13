@@ -17,7 +17,10 @@ def follow_target_ai_system(world: World, dt: float):
         mover = world.get_component(ent, Mover)
         transform = world.get_component(ent, Transform)
 
-        targ_transform = world.get_component(follower.target, Transform)
+        if ai.target is None:
+            continue
+
+        targ_transform = world.get_component(ai.target, Transform)
 
         final_want_dir = correct_want_dir(
             world,

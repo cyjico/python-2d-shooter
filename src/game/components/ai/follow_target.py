@@ -7,4 +7,4 @@ from game.core_ecs.entity import Entity
 
 @dataclass(slots=True)
 class FollowTargetAI:
-    target: Entity
+    pass

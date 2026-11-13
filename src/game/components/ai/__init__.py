@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 
+from game.core_ecs.entity import Entity
+
 
 @dataclass(slots=True)
 class AI:
+    target: Entity | None = None
+
     body_radius: float = 16.0
     """Used to make wall probes as wide as the body."""
     probe_distance: float = 45.0
