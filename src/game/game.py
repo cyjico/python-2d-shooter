@@ -34,7 +34,7 @@ from game.constants.spawning import (
 )
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
-from game.map_loader import MapSpawns, load_map
+from game.map_loader import TILE_SIZE, MapSpawns, load_map
 from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
@@ -265,17 +265,16 @@ class Game:
             )
         )
 
-        # Mystery box: one box that hops between the map's `M` spots.
-        if spawns.mystery_boxes:
-            self.mystery_box = spawn_mystery_box(
-                self.world, random.choice(spawns.mystery_boxes)
-            )
-            self.world.add_component(
-                self.mystery_box,
-                Relocatable(
-                    points=spawns.mystery_boxes, min_distance=MIN_MOVE_DISTANCE
-                ),
-            )
+        # Mystery box: one box that hops between the map's `M` spots. Maps
+        # without any `M` tile get a single box a few tiles from the player.
+        box_points = spawns.mystery_boxes or [
+            spawns.player + pygame.Vector2(3 * TILE_SIZE, 0)
+        ]
+        self.mystery_box = spawn_mystery_box(self.world, random.choice(box_points))
+        self.world.add_component(
+            self.mystery_box,
+            Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
+        )
 
 
 def main():
