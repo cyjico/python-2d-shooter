@@ -10,7 +10,6 @@ from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.prefabs.enemies import spawn_charger
-from game.resources.map_layout import MapLayout
 from game.util.geometry import rectangle
 
 TILE_SIZE = 40
@@ -93,7 +92,6 @@ def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
     """Create entities for every tile in a text map and add a MapLayout resource."""
     lines = path.read_text().splitlines()
 
-    world.add_resource(MapLayout(tuple(lines), TILE_SIZE))
     _spawn_merged_walls(world, lines)
 
     player_spawn = None

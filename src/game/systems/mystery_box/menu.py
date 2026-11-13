@@ -2,10 +2,10 @@
 
 from game.components.hud import InteractPromptLabel, MysteryBoxUI
 from game.components.loadout import Gun, Loadout
-from game.components.mystery_box import PRICE_STEP
 from game.components.ui import UIButton, UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.constants.gun_buffs import describe_buff
+from game.constants.mystery_box import stepped_price
 from game.constants.rarity import RARITIES, rarity_color
 from game.core_ecs.world import World
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
@@ -67,7 +67,7 @@ def _offer_menu(world: World, session: MysteryBoxSession, wallet: Wallet):
     gun = session.offer
     assert gun is not None and gun.rarity is not None
     spec = gun.spec
-    reroll_cost = session.last_paid + PRICE_STEP
+    reroll_cost = stepped_price(session.last_paid)
 
     _panel(world)
     _label(world, "Mystery Box", -85, 24, TITLE_COLOR)

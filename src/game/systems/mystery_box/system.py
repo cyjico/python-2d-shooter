@@ -4,21 +4,27 @@ from dataclasses import dataclass
 import pygame
 
 from game.components.loadout import Loadout
-from game.components.mystery_box import KEEP_DISCOUNT, PRICE_STEP, MysteryBox
+from game.components.mystery_box import MysteryBox
 from game.components.player import Player
 from game.components.transform import Transform
 from game.components.ui import UILabel
 from game.components.wallet import Wallet
 from game.constants.gun_buffs import make_gun, roll_gun
 from game.constants.guns import ALL_GUNS
+from game.constants.mystery_box import (
+    FLICKER_INTERVAL,
+    ROLL_DURATION,
+    keep_price,
+    stepped_price,
+)
 from game.core_ecs.world import World
 from game.events.ui import ButtonClickedEvent
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
-from game.systems.mystery_box.constants import FLICKER_INTERVAL, ROLL_DURATION
 from game.systems.mystery_box.menu import clear_menu, set_prompt, show_menu
-from game.systems.mystery_box.placement import nearest_box, relocate
+from game.systems.mystery_box.placement import nearest_box
+from game.util.spawn_points import relocate
 
 _default_rng = random.Random()
 
@@ -37,11 +43,6 @@ class _Frame:
     transform: Transform
     loadout: Loadout
     wallet: Wallet
-
-
-def keep_price(last_paid: int) -> int:
-    """Next price after keeping a gun: step up, then 5% off."""
-    return round((last_paid + PRICE_STEP) * (1 - KEEP_DISCOUNT))
 
 
 def mystery_box_system(world: World, dt: float, rng: random.Random | None = None):
@@ -123,7 +124,7 @@ def _offer(f: _Frame):
     session = f.session
     assert session.box is not None and session.offer is not None
     box = f.world.get_component(session.box, MysteryBox)
-    reroll_cost = session.last_paid + PRICE_STEP
+    reroll_cost = stepped_price(session.last_paid)
 
     if "box_take" in f.clicked or f.inputs.interact_pressed:
         if len(f.loadout.slots) < f.loadout.max_slots:
@@ -132,9 +133,9 @@ def _offer(f: _Frame):
         else:
             _set_phase(f, BoxPhase.CHOOSE_SLOT)
 
-    elif (
-        "box_reroll" in f.clicked or f.inputs.reload_pressed
-    ) and f.wallet.can_afford(reroll_cost):
+    elif ("box_reroll" in f.clicked or f.inputs.reload_pressed) and f.wallet.can_afford(
+        reroll_cost
+    ):
         f.wallet.spend(reroll_cost)
         session.last_paid = reroll_cost
         box.price = reroll_cost
@@ -142,7 +143,7 @@ def _offer(f: _Frame):
 
     elif "box_leave" in f.clicked or f.inputs.cancel_pressed:
         # Walking away loses the gun, same price penalty as a reroll.
-        box.price = session.last_paid + PRICE_STEP
+        box.price = stepped_price(session.last_paid)
         _close(f)
 
 
@@ -181,7 +182,7 @@ def _finish(f: _Frame):
     assert f.session.box is not None
     box = f.world.get_component(f.session.box, MysteryBox)
     box.price = keep_price(f.session.last_paid)
-    relocate(f.world, f.session.box, f.transform.position, f.rng)
+    relocate(f.world, f.session.box, f.rng)
     _close(f)
 
 

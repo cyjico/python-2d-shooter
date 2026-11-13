@@ -1,3 +1,3 @@
-from game.systems.mystery_box.system import keep_price, mystery_box_system
+from game.systems.mystery_box.system import mystery_box_system
 
-__all__ = ["mystery_box_system", "keep_price"]
+__all__ = ["mystery_box_system"]

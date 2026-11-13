@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 
-STARTING_PRICE = 200
-PRICE_STEP = 200
-"""Added to the price on every reroll or walk-away, and before the keep discount."""
-KEEP_DISCOUNT = 0.05
-"""Taken off the (stepped) price when a gun is kept."""
+from game.constants.mystery_box import STARTING_PRICE
 
 
 @dataclass(slots=True)

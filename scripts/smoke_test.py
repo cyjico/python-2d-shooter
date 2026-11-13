@@ -1,5 +1,7 @@
 import os
 
+from game.components.relocatable import Relocatable
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
@@ -12,7 +14,6 @@ from game.components.wallet import Wallet
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
-from game.resources.map_layout import MapLayout
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 
 game = Game()
@@ -89,7 +90,8 @@ assert box.price == 570, box.price  # (400 + 200) * 0.95
 
 new_box_pos = world.get_component(game.mystery_box, Transform).position
 assert new_box_pos.distance_to(old_box_pos) >= 240
-assert new_box_pos in world.get_resource(MapLayout).spawnable_tiles()
+points = world.get_component(game.mystery_box, Relocatable).points
+assert new_box_pos in points
 
 # Number keys switch slots.
 press(pygame.K_2)

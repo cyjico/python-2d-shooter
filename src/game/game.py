@@ -17,6 +17,7 @@ from game.components.hud import (
 from game.components.loadout import Gun, Loadout
 from game.components.mover import Mover
 from game.components.player import Player
+from game.components.relocatable import Relocatable
 from game.components.rigid_body import RigidBody, inertia_of_box
 from game.components.shape import Shape
 from game.components.spawner import Spawner
@@ -25,9 +26,8 @@ from game.components.ui import UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL
+from game.constants.mystery_box import MIN_MOVE_DISTANCE
 from game.constants.spawning import (
-    BOX_INTERVAL,
-    BOX_MAX_ALIVE,
     CRATE_INTERVAL,
     CRATE_MAX_PER_SPOT,
 )
@@ -40,7 +40,6 @@ from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
-from game.resources.map_layout import MapLayout
 from game.resources.mystery_box_session import MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
@@ -129,7 +128,7 @@ class Game:
 
         self.world.get_component(self.player, Transform).position = spawns.player
         self.world.get_resource(Camera).center_on(spawns.player)
-        self._setup_spawners(spawns)
+        self._setup_map_objects(spawns)
 
         # --- UI ---
         self.world.create_entity(
@@ -233,8 +232,8 @@ class Game:
 
         pygame.quit()
 
-    def _setup_spawners(self, spawns: MapSpawns):
-        # The map's crates and one box exist from the start; spawners add more later.
+    def _setup_map_objects(self, spawns: MapSpawns):
+        # Crates: the map's crates exist from the start; the spawner adds more later.
         crates = [spawn_crate(self.world, pos) for pos in spawns.crates]
         self.world.create_entity(
             Spawner(
@@ -246,21 +245,17 @@ class Game:
             )
         )
 
-        boxes = []
+        # Mystery box: one box that hops between the map's `M` spots.
         if spawns.mystery_boxes:
             self.mystery_box = spawn_mystery_box(
                 self.world, random.choice(spawns.mystery_boxes)
             )
-            boxes.append(self.mystery_box)
-        self.world.create_entity(
-            Spawner(
-                points=spawns.mystery_boxes,
-                spawn=spawn_mystery_box,
-                interval=BOX_INTERVAL,
-                max_alive=BOX_MAX_ALIVE,
-                spawned=boxes,
+            self.world.add_component(
+                self.mystery_box,
+                Relocatable(
+                    points=spawns.mystery_boxes, min_distance=MIN_MOVE_DISTANCE
+                ),
             )
-        )
 
 
 def main():
