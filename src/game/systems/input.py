@@ -27,7 +27,7 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
     inputs.mouse_pos = pygame.Vector2(pygame.mouse.get_pos())
 
     # Transitions come from events so a press+release between polls isn't lost
-    pressed = released = reload = interact = cancel = False
+    pressed = released = reload = interact = cancel = dash_pressed = False
     switch = 0
     slot = None
     for event in events:
@@ -40,6 +40,8 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
                 reload = True
             elif event.key == pygame.K_q:
                 switch += 1
+            elif event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_SPACE):
+                dash_pressed = True
             elif event.key in SLOT_KEYS:
                 slot = SLOT_KEYS[event.key]
             elif event.key == pygame.K_e:
@@ -57,3 +59,4 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
     inputs.slot_pressed = slot
     inputs.interact_pressed = interact
     inputs.cancel_pressed = cancel
+    inputs.dash_pressed = dash_pressed
