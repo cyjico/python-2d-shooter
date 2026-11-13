@@ -9,6 +9,10 @@ from game.constants.mystery_box import stepped_price
 from game.constants.rarity import RARITIES, rarity_color
 from game.core_ecs.world import World
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.resources.ui_state import UIState
+
+INPUT_OWNER = "mystery_box"
+"""Key this menu uses to block gameplay input in UIState."""
 
 MENU_LAYER = 10
 PANEL_SIZE = (380, 220)
@@ -33,6 +37,7 @@ def set_prompt(world: World, text: str):
 def clear_menu(world: World):
     for entity, _ in world.query(MysteryBoxUI):
         world.destroy_entity(entity)
+    world.get_resource(UIState).release_gameplay_input(INPUT_OWNER)
 
 
 def show_menu(
@@ -51,6 +56,9 @@ def show_menu(
             _offer_menu(world, session, wallet)
         case BoxPhase.CHOOSE_SLOT:
             _slot_menu(world, session, loadout)
+
+    if session.is_open:
+        world.get_resource(UIState).block_gameplay_input(INPUT_OWNER)
 
 
 # Menus
