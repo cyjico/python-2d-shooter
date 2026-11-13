@@ -4,9 +4,11 @@ from dataclasses import replace
 import pygame
 
 from game.components.bounty import Bounty
+from game.components.dash import Dash
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.relocatable import Relocatable
+from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.components.wallet import Wallet
 from game.constants.buffs import MONEY_BOOSTS
@@ -161,6 +163,19 @@ grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
 before = wallet.balance
 bounty = kill_charger()
 assert wallet.balance == before + round(bounty * 1.75), wallet.balance
+
+# Dashing spends stamina and stops when it runs out.
+stamina = world.get_component(game.player, Stamina)
+dash = world.get_component(game.player, Dash)
+stamina.current = 2.0
+press(pygame.K_SPACE)
+assert 0.9 < stamina.current < 1.2, stamina.current
+step(20)
+press(pygame.K_SPACE)
+assert stamina.current < 0.5, stamina.current
+step(20)
+press(pygame.K_SPACE)
+assert not dash.active and stamina.current < 1.0
 
 step(60)
 
