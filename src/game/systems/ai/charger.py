@@ -132,30 +132,46 @@ def charger_ai_system(world: World, dt: float):
 
 
 def charger_ai_collision_system(world: World):
-    """Stuns on walls, damages on contact. Run after collision_system, before health_system."""
+    """Stuns on walls, damages on contact."""
     events = world.get_resource(EventBus)
 
+    contacts: dict[Entity, list[Entity]] = {}
     for collision in events.read(CollisionEvent):
-        _on_contact(world, events, collision.entity_a, collision.entity_b)
-        _on_contact(world, events, collision.entity_b, collision.entity_a)
+        for me, other in (
+            (collision.entity_a, collision.entity_b),
+            (collision.entity_b, collision.entity_a),
+        ):
+            charger = world.try_get_component(me, ChargerAI)
+            if charger is not None and charger.state is ChargerAIState.CHARGE:
+                contacts.setdefault(me, []).append(other)
+
+    for me, others in contacts.items():
+        _resolve_contacts(world, events, me, others)
 
 
-def _on_contact(world: World, events: EventBus, me: Entity, other: Entity):
-    charger = world.try_get_component(me, ChargerAI)
-    if charger is None or charger.state is not ChargerAIState.CHARGE:
-        return
+def _resolve_contacts(world: World, events: EventBus, me: Entity, others: list[Entity]):
+    """Damage every valid target hit this pass; a wall hit stuns, otherwise a damaging
+    hit ends the charge."""
+    charger = world.get_component(me, ChargerAI)
+    hit_wall = hit_target = False
 
-    collider = world.try_get_component(other, ConvexCollider)
-    if collider is None or collider.is_trigger:
-        return
+    for other in others:
+        collider = world.try_get_component(other, ConvexCollider)
+        if collider is None or collider.is_trigger:
+            continue
 
-    if not world.has_component(other, RigidBody):
+        if not world.has_component(other, RigidBody):
+            hit_wall = True
+        elif world.has_component(other, Health) and not world.has_component(
+            other, charger.component_mask
+        ):
+            events.emit(DamageEvent(other, charger.contact_damage, me))
+            hit_target = True
+
+    if hit_wall:
         charger.state = ChargerAIState.STUNNED
         charger.timer = charger.stun_time
-    elif world.has_component(other, Health) and not world.has_component(
-        other, charger.component_mask
-    ):
-        events.emit(DamageEvent(other, charger.contact_damage, me))
+    elif hit_target:
         _start_hover(
             world,
             me,
