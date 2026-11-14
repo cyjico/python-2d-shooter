@@ -15,6 +15,10 @@ class RandomDashAI:
     """Chance, from 0 to 1, that a roll actually dashes."""
     max_target_distance: float = 450.0
     """Only dashes while the target is this close, so it looks like a reaction."""
+    aim_range: float = 350.0
+    """At this distance or farther, dashes are fully random. Closer, they aim more at the target."""
+    min_spread: float = 0.35
+    """Max deviation (radians) from the target direction when right next to it."""
 
     max_target_dist_sqr: float = field(init=False)
     """Squared `max_target_distance`. Computed once."""

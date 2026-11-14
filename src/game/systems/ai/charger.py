@@ -7,6 +7,7 @@ from game.components.ai.charger import ChargerAI, ChargerAIState
 from game.components.ai.hover_around_target import HoverAroundTargetAI
 from game.components.convex_collider import ConvexCollider
 from game.components.health import Health
+from game.components.invulnerable import Invulnerable
 from game.components.mover import Mover
 from game.components.rigid_body import RigidBody
 from game.components.shape import Shape
@@ -17,20 +18,7 @@ from game.events.collision import CollisionEvent, directed
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
 from game.util.factions import is_hostile
-from game.util.geometry import angle_of, rot_to_vec2
-
-
-def _start_hover(
-    world: World, ent: Entity, charger: ChargerAI, mover: Mover, shape: Shape
-):
-    if charger.normal_stats is not None:
-        mover.move_speed, mover.move_accel, mover.turn_speed = charger.normal_stats
-        charger.normal_stats = None
-
-    shape.color = charger.base_color
-    charger.state = ChargerAIState.HOVER
-    charger.timer = random.uniform(*charger.hover_time)
-    _resume_hover_behavior(world, ent, charger)
+from game.util.geometry import angle_of, intercept_time, rot_to_vec2
 
 
 def _resume_hover_behavior(world: World, ent: Entity, charger: ChargerAI):
@@ -45,22 +33,66 @@ def _suspend_hover_behavior(world: World, ent: Entity, charger: ChargerAI):
         charger.hover_behavior = world.remove_component(ent, HoverAroundTargetAI)
 
 
+def _start_hover(
+    world: World, ent: Entity, charger: ChargerAI, mover: Mover, shape: Shape
+):
+    if charger.normal_stats is not None:
+        mover.move_speed, mover.move_accel, mover.turn_speed = charger.normal_stats
+        charger.normal_stats = None
+
+    shape.color = charger.base_color
+    charger.state = ChargerAIState.HOVER
+    charger.timer = random.uniform(*charger.hover_time)
+    world.try_remove_component(ent, Invulnerable)
+    _resume_hover_behavior(world, ent, charger)
+
+
+def _lead_direction(
+    world: World, charger: ChargerAI, transform: Transform, target: Entity
+):
+    """Direction to the spot where the target will be when the charge arrives."""
+    target_transform = world.get_component(target, Transform)
+    body = world.try_get_component(target, RigidBody)
+    toward = target_transform.position - transform.position
+    if body is None:
+        return toward
+
+    t = intercept_time(
+        transform.position,
+        charger.charge_speed,
+        target_transform.position,
+        body.linear_velocity,
+    )
+    if t is None:
+        return toward
+
+    # Don't aim past where the charge can actually reach.
+    t = min(t, charger.charge_distance_sqr**0.5 / charger.charge_speed)
+    return target_transform.position + body.linear_velocity * t - transform.position
+
+
 def _windup(
+    world: World,
+    ent: Entity,
     charger: ChargerAI,
     mover: Mover,
     transform: Transform,
     shape: Shape,
-    toward: pygame.Vector2,
+    target: Entity,
     dt: float,
 ):
     shape.color = charger.windup_color
     mover.move_dir.update()
-    mover.face_angle = angle_of(toward)
+
+    aim = _lead_direction(world, charger, transform, target)
+    if aim.length_squared() > 0:
+        mover.face_angle = angle_of(aim)
 
     charger.timer -= dt
     if charger.timer <= 0:
         charger.state = ChargerAIState.CHARGE
         charger.charge_origin = pygame.Vector2(transform.position)
+        world.try_remove_component(ent, Invulnerable)
 
 
 def _charge(
@@ -105,10 +137,6 @@ def charger_ai_system(world: World, dt: float):
         if ai.target is None:
             continue
 
-        targ_transform = world.get_component(ai.target, Transform)
-
-        toward = targ_transform.position - transform.position
-
         match charger.state:
             # HOVER -> WINDUP -> CHARGE -> (hits wall) -> STUNNED -> HOVER
             case ChargerAIState.HOVER:
@@ -122,8 +150,9 @@ def charger_ai_system(world: World, dt: float):
                         mover.turn_speed,
                     )
                     _suspend_hover_behavior(world, ent, charger)
+                    world.add_component(ent, Invulnerable())
             case ChargerAIState.WINDUP:
-                _windup(charger, mover, transform, shape, toward, dt)
+                _windup(world, ent, charger, mover, transform, shape, ai.target, dt)
             case ChargerAIState.CHARGE:
                 _charge(world, ent, charger, mover, transform, shape)
             case ChargerAIState.STUNNED:

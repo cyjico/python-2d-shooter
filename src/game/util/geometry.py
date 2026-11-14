@@ -250,3 +250,41 @@ def rectangle(width: float, height: float):
         pygame.Vector2(half_w, half_h),
         pygame.Vector2(-half_w, half_h),
     )
+
+
+def distance_to_segment(
+    point: pygame.Vector2, start: pygame.Vector2, end: pygame.Vector2
+):
+    """Shortest distance from `point` to the segment `start`-`end`."""
+    delta = end - start
+    length_sqr = delta.length_squared()
+    if length_sqr == 0:
+        return point.distance_to(start)
+
+    t = max(0.0, min(1.0, (point - start).dot(delta) / length_sqr))
+    return point.distance_to(start + delta * t)
+
+
+def intercept_time(
+    shooter: pygame.Vector2,
+    speed: float,
+    target: pygame.Vector2,
+    target_velocity: pygame.Vector2,
+):
+    """Smallest positive time at which something leaving `shooter` at `speed`
+    can meet a target moving at constant velocity, or `None` if it can't."""
+    d = target - shooter
+    a = target_velocity.length_squared() - speed**2
+    b = 2 * d.dot(target_velocity)
+    c = d.length_squared()
+
+    if abs(a) < 1e-9:
+        return -c / b if b < 0 else None
+
+    disc = b * b - 4 * a * c
+    if disc < 0:
+        return None
+
+    root = math.sqrt(disc)
+    times = [t for t in ((-b - root) / (2 * a), (-b + root) / (2 * a)) if t > 0]
+    return min(times) if times else None

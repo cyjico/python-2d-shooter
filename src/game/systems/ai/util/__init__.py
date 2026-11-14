@@ -68,3 +68,22 @@ def random_open_direction(
         if not raycast_static_bundle(world, pos, direction, distance, ai.body_radius):
             return direction
     return None
+
+
+def open_direction_near(
+    world: World,
+    ai: AI,
+    pos: pygame.Vector2,
+    distance: float,
+    center_angle: float,
+    spread: float,
+    rng: random.Random | None = None,
+    tries: int = 8,
+):
+    """Like `random_open_direction`, but only within `spread` radians of `center_angle`."""
+    rng = resolve_rng(rng)
+    for _ in range(tries):
+        direction = rot_to_vec2(center_angle + rng.uniform(-spread, spread))
+        if not raycast_static_bundle(world, pos, direction, distance, ai.body_radius):
+            return direction
+    return None
