@@ -12,6 +12,7 @@ from game.components.dash import Dash
 from game.components.health import Health
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
+from game.components.offscreen_despawn import OffscreenDespawn
 from game.components.relocatable import Relocatable
 from game.components.rigid_body import RigidBody
 from game.components.split_on_death import SplitOnDeath
@@ -19,13 +20,23 @@ from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.components.wallet import Wallet
 from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
+from game.constants.enemy_spawning import (
+    SPAWN_MARGIN_MAX,
+    SPAWN_MARGIN_MIN,
+    max_enemies,
+    spawn_interval,
+)
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
 from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
 from game.prefabs.gun_projectile import spawn_gun_projectile
+from game.resources.camera import Camera
+from game.resources.enemy_director import EnemyDirector
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
+from game.systems.enemy_spawn import enemy_spawn_system
+from game.systems.offscreen_despawn import offscreen_despawn_system
 from game.util.buffs import grant_buff, stat_bonus, stat_multiplier
 from game.util.factions import is_hostile
 from game.util.rng import DEFAULT_RNG
@@ -34,6 +45,15 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 game = Game()
+
+world = game.world
+session = world.get_resource(MysteryBoxSession)
+loadout = world.get_component(game.player, Loadout)
+wallet = world.get_component(game.player, Wallet)
+box = world.get_component(game.mystery_box, MysteryBox)
+ui_state = world.get_resource(UIState)
+director = world.get_resource(EnemyDirector)
+director.timer = math.inf
 
 
 random.seed(1234)
@@ -68,13 +88,6 @@ def stand_next_to_box():
 
 
 step(120)  # about 2 seconds of game time
-
-world = game.world
-session = world.get_resource(MysteryBoxSession)
-loadout = world.get_component(game.player, Loadout)
-wallet = world.get_component(game.player, Wallet)
-box = world.get_component(game.mystery_box, MysteryBox)
-ui_state = world.get_resource(UIState)
 
 # Every gun x rarity builds a valid, never-weaker spec.
 for base in ALL_GUNS.values():
@@ -276,6 +289,43 @@ for e in smalls:
 
 for e in enemies() - known:
     world.destroy_entity(e)
+
+# Survival spawning: off screen, in the band, and ramping up.
+assert spawn_interval(600) < spawn_interval(0) and max_enemies(600) > max_enemies(0)
+
+for e in enemies():
+    world.destroy_entity(e)
+camera = world.get_resource(Camera)
+for _ in range(200):  # the position is random, so sample it a lot
+    known = enemies()
+    director.elapsed, director.timer = 0.0, 0.0
+    enemy_spawn_system(world, 1 / 60)
+    (spawned,) = enemies() - known
+    pos = world.get_component(spawned, Transform).position
+    assert not camera.is_circle_visible(pos, SPAWN_MARGIN_MIN - 1)
+    assert camera.is_circle_visible(pos, SPAWN_MARGIN_MAX)
+    world.destroy_entity(spawned)
+
+# Off-screen enemies give up after the timeout; coming into view resets it.
+camera = world.get_resource(Camera)
+far = camera.screen_to_world(pygame.Vector2(5000, 5000))
+stuck = spawn_chaser(world, far, game.player)
+world.add_component(stuck, OffscreenDespawn(timeout=1.0))
+
+offscreen_despawn_system(world, 0.6)
+assert world.is_alive(stuck)
+
+world.get_component(stuck, Transform).position = camera.screen_to_world(
+    camera.viewport_size / 2
+)
+offscreen_despawn_system(world, 0.6)
+assert world.get_component(stuck, OffscreenDespawn).offscreen_time == 0.0
+
+world.get_component(stuck, Transform).position = far
+offscreen_despawn_system(world, 0.6)
+assert world.is_alive(stuck)
+offscreen_despawn_system(world, 0.6)
+assert not world.is_alive(stuck)
 
 step(60)
 
