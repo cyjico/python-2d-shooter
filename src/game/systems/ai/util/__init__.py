@@ -1,8 +1,14 @@
+import math
+import random
+
 import pygame
 
 from game.components.ai import AI
 from game.core_ecs.world import World
+from game.util.geometry import rot_to_vec2
 from game.util.raycast import raycast_static_bundle
+
+_default_rng = random.Random()
 
 
 def correct_want_dir(
@@ -42,3 +48,24 @@ def correct_want_dir(
         side = -side
 
     return pygame.Vector2()
+
+
+def random_open_direction(
+    world: World,
+    ai: AI,
+    pos: pygame.Vector2,
+    distance: float,
+    rng: random.Random | None = None,
+    tries: int = 8,
+):
+    """A random unit direction with no static collider within `distance`.
+
+    Returns:
+        pygame.Vector2 | None: `None` if every try was blocked.
+    """
+    rng = rng or _default_rng
+    for _ in range(tries):
+        direction = rot_to_vec2(rng.uniform(0.0, math.tau))
+        if not raycast_static_bundle(world, pos, direction, distance, ai.body_radius):
+            return direction
+    return None

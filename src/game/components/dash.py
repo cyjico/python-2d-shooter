@@ -8,7 +8,7 @@ from game.core_ecs.entity import Entity
 @dataclass(slots=True)
 class Dash:
     speed: float = 700.0
-    """Velocity while dashing. Distance is roughly speed * duration."""
+    """Velocity while dashing."""
     duration: float = 0.15
     cooldown: float = 0.25
     """Minimum seconds between dash starts, regardless of stamina."""
@@ -31,14 +31,25 @@ class Dash:
     def active(self):
         return self.time_left > 0.0
 
+    @property
+    def ready(self):
+        """Can start a dash (stamina aside)."""
+        return not self.active and self.cooldown_left == 0.0
+
+    @property
+    def distance(self):
+        """Roughly how far a dash travels."""
+        return self.speed * self.duration
+
 
 @dataclass(slots=True)
 class DashIntent:
     """Whether the entity wants to dash.
 
     The player's input fills this in; an AI can fill it the same way.
-    The dash direction comes from the entity's Mover, not from here.
     """
 
     requested: bool = False
     """Cleared by dash_system once read, so a one-off request can't repeat."""
+    direction: pygame.Vector2 | None = None
+    """Where to dash. `None` = where the entity's Mover is heading. Cleared with `requested`."""
