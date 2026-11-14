@@ -14,7 +14,7 @@ class DamageEvent:
 @dataclass(slots=True)
 class DamageTakenEvent:
     """Damage that reached an entity's Health (i.e. not blocked by immunity).
-    Bonus health may still have absorbed some or all of it."""
+    Shield may still have absorbed some or all of it."""
 
     target: Entity
     amount: float

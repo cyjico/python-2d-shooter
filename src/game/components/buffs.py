@@ -35,14 +35,15 @@ class BuffSpec:
     bonuses: Mapping[Stat, float] = field(default_factory=dict)
     """Flat amounts added to a stat. Stacks by adding."""
     flags: frozenset[Flag] = frozenset()
-    bonus_health: float = 0.0
+    shield: float = 0.0
     """Extra health that absorbs damage first. Whatever is left is lost when the buff ends."""
 
     def __post_init__(self):
-        # Copy so later changes to the caller's dict can't alter this spec.
+        # Copy so later changes to the caller's dicts can't alter this spec.
         object.__setattr__(
             self, "multipliers", MappingProxyType(dict(self.multipliers))
         )
+        object.__setattr__(self, "bonuses", MappingProxyType(dict(self.bonuses)))
 
 
 @dataclass(slots=True)
@@ -51,8 +52,8 @@ class ActiveBuff:
 
     spec: BuffSpec
     time_left: float
-    bonus_health: float
-    """What is left of `spec.bonus_health`."""
+    shield: float
+    """What is left of `spec.shield`."""
 
 
 @dataclass(slots=True)
@@ -61,28 +62,33 @@ class ActiveBuffs:
 
     buffs: list[ActiveBuff] = field(default_factory=list)
 
+    @property
+    def shield(self):
+        """Total shield left across all active buffs."""
+        return sum(buff.shield for buff in self.buffs)
+
     def add(self, spec: BuffSpec):
         """Starts `spec`, or restarts it if it is already active."""
         self.buffs = [b for b in self.buffs if b.spec.id != spec.id]
-        self.buffs.append(ActiveBuff(spec, spec.duration, spec.bonus_health))
+        self.buffs.append(ActiveBuff(spec, spec.duration, spec.shield))
 
-    def multiplier(self, stat: Stat) -> float:
+    def multiplier(self, stat: Stat):
         result = 1.0
         for buff in self.buffs:
             result *= buff.spec.multipliers.get(stat, 1.0)
         return result
 
-    def bonus(self, stat: Stat) -> float:
+    def bonus(self, stat: Stat):
         return sum(buff.spec.bonuses.get(stat, 0.0) for buff in self.buffs)
 
-    def has(self, flag: Flag) -> bool:
+    def has(self, flag: Flag):
         return any(flag in buff.spec.flags for buff in self.buffs)
 
-    def absorb(self, amount: float) -> float:
-        """Spends bonus health on `amount` damage. Returns the damage left over."""
+    def absorb(self, amount: float):
+        """Spends shield on `amount` damage. Returns the damage left over."""
         for buff in self.buffs:
-            taken = min(buff.bonus_health, amount)
-            buff.bonus_health -= taken
+            taken = min(buff.shield, amount)
+            buff.shield -= taken
             amount -= taken
         return amount
 

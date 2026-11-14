@@ -25,11 +25,11 @@ IMMUNITY = BuffSpec(
     flags=frozenset({Flag.IMMUNE}),
 )
 
-OVERHEAL = BuffSpec(
-    id="overheal",
-    name="Overheal",
+SHIELD = BuffSpec(
+    id="shield",
+    name="Shield",
     duration=15.0,
-    bonus_health=300.0,
+    shield=300.0,
 )
 
 EXTRA_STAMINA = BuffSpec(
@@ -52,7 +52,7 @@ ALL_BUFFS: dict[str, BuffSpec] = {
         SPEED_BOOST,
         DAMAGE_BOOST,
         IMMUNITY,
-        OVERHEAL,
+        SHIELD,
         EXTRA_STAMINA,
         QUICK_RECOVERY,
     )
@@ -82,7 +82,7 @@ MONEY_BOOSTS: dict[Rarity, BuffSpec] = {
 """One money buff per rarity tier."""
 
 
-def roll_buff(rng: random.Random | None = None) -> BuffSpec:
+def roll_buff(rng: random.Random | None = None):
     """Uniform over the fixed buffs and the money boost; money's tier is
     weighted by RARITIES."""
     rng = rng or random.Random()

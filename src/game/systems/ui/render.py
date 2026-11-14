@@ -11,23 +11,20 @@ from game.components.ui import (
 )
 from game.core_ecs.world import World
 from game.resources.asset_store import AssetStore
+from game.util.draw import draw_bar
 
 
 def _draw_gauge(surface: pygame.Surface, rect: pygame.Rect, gauge: UIGauge):
-    pygame.draw.rect(surface, gauge.empty_color, rect, border_radius=4)
-
-    fill_width = round(rect.width * max(0.0, min(1.0, gauge.value)))
-    if fill_width > 0:
-        fill = pygame.Rect(rect.left, rect.top, fill_width, rect.height)
-        pygame.draw.rect(surface, gauge.fill_color, fill, border_radius=4)
-
-    for i in range(1, gauge.segments):
-        x = rect.left + round(rect.width * i / gauge.segments)
-        pygame.draw.line(
-            surface, gauge.marker_color, (x, rect.top), (x, rect.bottom - 1), 2
-        )
-
-    pygame.draw.rect(surface, gauge.border_color, rect, width=2, border_radius=4)
+    draw_bar(
+        surface,
+        rect,
+        [(gauge.value, gauge.fill_color)],
+        gauge.empty_color,
+        gauge.border_color,
+        border_radius=4,
+        segments=gauge.segments,
+        marker_color=gauge.marker_color,
+    )
 
 
 def ui_render_system(world: World, surface: pygame.Surface):

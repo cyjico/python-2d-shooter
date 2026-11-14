@@ -3,6 +3,7 @@ import math
 import pygame
 
 from game.components.convex_collider import ConvexCollider
+from game.components.lifetime import Lifetime
 from game.components.loadout import GunSpec
 from game.components.projectile import Projectile
 from game.components.rigid_body import RigidBody
@@ -39,10 +40,10 @@ def spawn_gun_projectile(
         Projectile(
             owner=shooter,
             damage=spec.damage * damage_scale,
-            lifetime=spec.max_range / spec.projectile_speed,
             pierce_left=spec.pierce,
             knockback=spec.knockback,
             crit_chance=spec.crit_chance,
             crit_multiplier=spec.crit_multiplier,
         ),
+        Lifetime(spec.max_range / spec.projectile_speed),
     )

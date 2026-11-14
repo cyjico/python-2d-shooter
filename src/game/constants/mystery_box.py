@@ -17,11 +17,11 @@ MIN_MOVE_DISTANCE = 240.0
 """How far (px) the box must move after a gun is taken."""
 
 
-def stepped_price(last_paid: int) -> int:
+def stepped_price(last_paid: int):
     """Price after a reroll or walking away."""
     return last_paid + PRICE_STEP
 
 
-def keep_price(last_paid: int) -> int:
+def keep_price(last_paid: int):
     """Next price after keeping a gun: step up, then 5% off."""
     return round(stepped_price(last_paid) * (1 - KEEP_DISCOUNT))

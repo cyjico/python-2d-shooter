@@ -88,7 +88,7 @@ class MapSpawns:
     """World positions of every `C` tile."""
 
 
-def load_map(world: World, path: Path, player: Entity) -> MapSpawns:
+def load_map(world: World, path: Path, player: Entity):
     """Create entities for every tile in a text map and return its spawn points."""
     lines = path.read_text().splitlines()
 

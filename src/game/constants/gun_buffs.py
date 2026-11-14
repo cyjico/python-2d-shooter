@@ -60,25 +60,25 @@ GUN_BUFFS: dict[str, GunBuff] = {
 }
 
 
-def buffed_spec(spec: GunSpec, rarity: Rarity) -> GunSpec:
+def buffed_spec(spec: GunSpec, rarity: Rarity):
     """`spec` with its gun type's buff applied at `rarity`, renamed e.g. "Rare Shotgun"."""
     buff = GUN_BUFFS[spec.id]
     buffed = buff.apply(spec, buff.values[rarity.value])
     return replace(buffed, name=f"{RARITIES[rarity].name} {spec.name}")
 
 
-def make_gun(spec: GunSpec, rarity: Rarity) -> Gun:
+def make_gun(spec: GunSpec, rarity: Rarity):
     """A fully loaded gun of `spec`'s type with its rarity buff applied."""
     return Gun.full(buffed_spec(spec, rarity), rarity)
 
 
-def describe_buff(spec_id: str, rarity: Rarity) -> str:
+def describe_buff(spec_id: str, rarity: Rarity):
     """E.g. "Buckshot: +3 pellets"."""
     buff = GUN_BUFFS[spec_id]
     return f"{buff.name}: {buff.describe(buff.values[rarity.value])}"
 
 
-def roll_gun(rng: random.Random | None = None) -> tuple[GunSpec, Rarity]:
+def roll_gun(rng: random.Random | None = None):
     """Uniform gun type, rarity weighted by RARITIES."""
     rng = rng or random.Random()
     spec = rng.choice(list(ALL_GUNS.values()))

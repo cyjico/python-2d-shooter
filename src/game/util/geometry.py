@@ -223,7 +223,7 @@ def segment_hits_aabb(
     start: pygame.Vector2,
     end: pygame.Vector2,
     aabb: tuple[float, float, float, float],
-) -> bool:
+):
     x1, y1, x2, y2 = aabb
 
     return not (

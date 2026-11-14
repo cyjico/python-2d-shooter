@@ -28,7 +28,7 @@ def rarity_color(rarity: Rarity | None):
     return PLAIN_COLOR if rarity is None else RARITIES[rarity].color
 
 
-def roll_rarity(rng: random.Random | None = None) -> Rarity:
+def roll_rarity(rng: random.Random | None = None):
     """Rarity weighted by RARITIES."""
     rng = rng or random.Random()
     tiers = list(RARITIES)
