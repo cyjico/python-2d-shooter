@@ -44,6 +44,14 @@ class World:
 
         self._components[component_type][entity] = component
 
+    def try_remove_component[C](
+        self, entity: Entity, component_type: type[C]
+    ) -> C | None:
+        if self.has_component(entity, component_type):
+            return self.remove_component(entity, component_type)
+
+        return None
+
     def remove_component[C](self, entity: Entity, component_type: type[C]) -> C:
         pool = self._components.get(component_type)
 
