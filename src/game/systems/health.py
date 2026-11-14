@@ -1,5 +1,6 @@
 from game.components.buffs import Flag
 from game.components.health import Health
+from game.components.invulnerable import Invulnerable
 from game.components.player import Player
 from game.core_ecs.world import World
 from game.events.combat import DamageEvent, DamageTakenEvent, EntityDiedEvent
@@ -16,7 +17,9 @@ def health_system(world: World):
         if health is None:
             continue
 
-        if has_flag(world, damage.target, Flag.IMMUNE):
+        if world.has_component(damage.target, Invulnerable) or has_flag(
+            world, damage.target, Flag.IMMUNE
+        ):
             continue
 
         events.emit(DamageTakenEvent(damage.target, damage.amount, damage.critical))
