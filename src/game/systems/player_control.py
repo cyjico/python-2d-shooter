@@ -23,11 +23,16 @@ def player_control_system(world: World, dt: float):
         mover = world.get_component(ent, Mover)
         transform = world.get_component(ent, Transform)
 
-        mover.move_dir = pygame.Vector2() if blocked else inputs.movement
+        if blocked:
+            mover.move_dir = pygame.Vector2()
+            mover.face_angle = None
+            continue
+
+        mover.move_dir = pygame.Vector2()
 
         to_mouse = mouse_world - transform.position
         if to_mouse.length_squared() < 1.0:
             continue
 
         # Both pygame's y-down axes and Transform's rotation are clockwise-positive.
-        mover.face_angle = None if blocked else math.atan2(to_mouse.y, to_mouse.x)
+        mover.face_angle = math.atan2(to_mouse.y, to_mouse.x)
