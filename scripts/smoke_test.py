@@ -50,7 +50,27 @@ from game.util.rng import DEFAULT_RNG
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-game = Game()
+# Every launch plays the intro, timed to its audio, then the main menu.
+first = Game()
+assert first.state is GameState.INTRO
+timeline = first.intro.timeline
+assert 0 < timeline.impact < timeline.duration
+assert timeline.text_fade_in[0] == timeline.impact, "name lands on the hit"
+assert timeline.fade_out[1] <= timeline.duration
+for _ in range(round(timeline.duration * 60) + 5):
+    first.handle_events()
+    first.update(1 / 60)
+    first.render()
+assert first.state is GameState.MENU, first.state
+
+# A keypress skips it.
+skipped = Game()
+pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+skipped.handle_events()
+skipped.update(1 / 60)
+assert skipped.state is GameState.MENU
+
+game = Game(play_intro=False)
 
 # The game opens on the main menu; its Play button starts a run.
 assert game.state is GameState.MENU and game.player is None

@@ -37,6 +37,7 @@ from game.constants.spawning import (
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
 from game.events.ui import ButtonClickedEvent
+from game.intro import Intro
 from game.map_loader import TILE_SIZE, MapSpawns, load_map
 from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
@@ -111,6 +112,8 @@ from game.util.factions import Faction
 
 
 class GameState(Enum):
+    INTRO = auto()
+    """ASRP's startup intro, every time the game opens."""
     MENU = auto()
     """Main menu: only a Play button."""
     PLAYING = auto()
@@ -121,7 +124,10 @@ class GameState(Enum):
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, play_intro: bool = True):
+        """`play_intro`: show ASRP's intro before the main menu."""
+        # The intro's synthesized sound is built for this format.
+        pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
 
         self.settings = DEFAULT_SETTINGS
@@ -139,7 +145,13 @@ class Game:
         ui_layout_system(self.world)
         self.player = None
         self.mystery_box = None
-        self._set_state(GameState.MENU)
+
+        self.intro: Intro | None = None
+        if play_intro:
+            self.intro = Intro(self.settings.window_size)
+            self._set_state(GameState.INTRO)
+        else:
+            self._set_state(GameState.MENU)
 
         # --- Game state ---
         self.running = True
@@ -157,8 +169,9 @@ class Game:
 
     def _set_state(self, state: GameState):
         self.state = state
-        # The crosshair cursor replaces the system one during gameplay only.
-        pygame.mouse.set_visible(state is not GameState.PLAYING)
+        # The crosshair cursor replaces the system one during gameplay; the
+        # intro shows no cursor at all.
+        pygame.mouse.set_visible(state not in (GameState.PLAYING, GameState.INTRO))
 
     def start_run(self):
         """Starts a new run in a fresh world, replacing whatever was there."""
@@ -261,6 +274,11 @@ class Game:
         self.world.get_resource(EventBus).clear()
 
         match self.state:
+            case GameState.INTRO:
+                assert self.intro is not None
+                if self.intro.update(dt, self.events):
+                    self.intro = None
+                    self._set_state(GameState.MENU)
             case GameState.MENU:
                 self._screen_update()
             case GameState.PLAYING:
@@ -413,6 +431,11 @@ class Game:
         ui_layout_system(self.world)
 
     def render(self):
+        if self.intro is not None:
+            self.intro.render(self.screen)
+            pygame.display.flip()
+            return
+
         self.screen.fill(self.settings.background_color)
 
         if self.state is not GameState.MENU:
