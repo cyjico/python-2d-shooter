@@ -192,6 +192,16 @@ step(60)  # ~1s of regen at 0.3/s
 assert stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 2
 assert stamina.current > 2.0, stamina.current
 
+# Expiry goes through ActiveBuffs.tick, then the cap clamps stamina back down.
+stamina.current = 4.0
+active = world.get_component(game.player, ActiveBuffs)
+for buff in active.buffs:
+    buff.time_left = 0.001
+step()
+assert not active.buffs, active.buffs
+assert stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 0
+assert stamina.current <= 2.0, stamina.current
+
 # Quick Recovery doubles the regen rate.
 grant_buff(world, game.player, QUICK_RECOVERY)
 stamina.current = 0.0
