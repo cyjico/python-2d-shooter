@@ -11,7 +11,7 @@ from game.constants.enemy_spawning import (
     roll_enemy,
     spawn_interval,
 )
-from game.core_ecs.world import World
+from game.core_ecs.world import Entity, World
 from game.resources.camera import Camera
 from game.resources.enemy_director import EnemyDirector
 from game.util.rng import resolve_rng
@@ -19,6 +19,14 @@ from game.util.rng import resolve_rng
 
 def _enemy_count(world: World):
     return sum(1 for _, (f,) in world.query(Faction) if f.team & Team.ENEMY)
+
+
+def _spawn_enemy(world: World, player: Entity, elapsed: float, rng: random.Random):
+    camera = world.get_resource(Camera)
+    position = camera.random_point_outside_view(SPAWN_MARGIN_MIN, SPAWN_MARGIN_MAX, rng)
+    enemy = roll_enemy(elapsed, rng)(world, position, player)
+    # Stranded spawns (outside the map, behind walls) give up eventually.
+    world.add_component(enemy, OffscreenDespawn(GIVE_UP_TIME))
 
 
 def enemy_spawn_system(world: World, dt: float, rng: random.Random | None = None):
@@ -34,6 +42,10 @@ def enemy_spawn_system(world: World, dt: float, rng: random.Random | None = None
     if player is None:
         return
 
+    while director.backlog > 0:
+        director.backlog -= 1
+        _spawn_enemy(world, player, director.elapsed, rng)
+
     director.elapsed += dt
     director.timer -= dt
     if director.timer > 0:
@@ -43,9 +55,4 @@ def enemy_spawn_system(world: World, dt: float, rng: random.Random | None = None
     if _enemy_count(world) >= max_enemies(director.elapsed):
         return
 
-    camera = world.get_resource(Camera)
-    position = camera.random_point_outside_view(SPAWN_MARGIN_MIN, SPAWN_MARGIN_MAX, rng)
-    enemy = roll_enemy(director.elapsed, rng)(world, position, player)
-    # Stranded spawns (outside the map, behind walls) give up eventually.
-    # Enemies that never make it into view are despawned by offscreen_despawn_system.
-    world.add_component(enemy, OffscreenDespawn(GIVE_UP_TIME))
+    _spawn_enemy(world, player, director.elapsed, rng)

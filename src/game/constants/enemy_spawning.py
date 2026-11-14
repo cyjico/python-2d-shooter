@@ -25,17 +25,19 @@ Must comfortably exceed the time to walk in from SPAWN_MARGIN_MAX."""
 # How often
 START_INTERVAL = 6.0
 """Seconds between spawns at the start."""
-MIN_INTERVAL = 1.2
+MIN_INTERVAL = 0.8
 """The interval never drops below this."""
 INTERVAL_HALF_LIFE = 90.0
 """Seconds survived for the gap between START_INTERVAL and MIN_INTERVAL to halve."""
 
 # How many
-START_MAX_ENEMIES = 12
+INITIAL_ENEMIES = 6
+"""Enemies spawned off screen on the first update, ignoring the cap."""
+START_MAX_ENEMIES = 20
 """Alive-enemy cap at the start (map-placed enemies count too)."""
 EXTRA_ENEMY_EVERY = 20.0
 """One more enemy allowed per this many seconds survived."""
-HARD_MAX_ENEMIES = 40
+HARD_MAX_ENEMIES = 60
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,8 +51,8 @@ class EnemySpawnEntry:
 
 ENEMY_TABLE: tuple[EnemySpawnEntry, ...] = (
     EnemySpawnEntry(spawn_chaser, weight=10),
-    EnemySpawnEntry(spawn_splitter, weight=4, unlock_time=45.0),
-    EnemySpawnEntry(spawn_charger, weight=3, unlock_time=90.0),
+    EnemySpawnEntry(spawn_splitter, weight=4, unlock_time=8.0),
+    EnemySpawnEntry(spawn_charger, weight=3, unlock_time=16.0),
 )
 """At least one entry must have `unlock_time` 0."""
 
