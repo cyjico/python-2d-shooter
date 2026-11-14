@@ -28,7 +28,7 @@ def player_control_system(world: World, dt: float):
             mover.face_angle = None
             continue
 
-        mover.move_dir = pygame.Vector2()
+        mover.move_dir = inputs.movement
 
         to_mouse = mouse_world - transform.position
         if to_mouse.length_squared() < 1.0:
