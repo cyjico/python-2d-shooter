@@ -47,18 +47,24 @@ def health_bar_render_system(world: World, surface: pygame.Surface):
         bar = pygame.Rect(0, 0, width, HEIGHT)
         bar.midbottom = (round(center.x), round(center.y - radius - GAP))
 
+        buffs = world.try_get_component(entity, ActiveBuffs)
+        bonus = 0.0 if buffs is None else sum(b.bonus_health for b in buffs.buffs)
+
+        current = max(0.0, health.current)
+        # With bonus health the bar spans health + bonus, so the bonus stays
+        # visible even when regular health is full.
+        total = max(health.maximum, current + bonus)
+
         pygame.draw.rect(surface, BACKGROUND_COLOR, bar)
 
-        fraction = max(0.0, min(1.0, health.current / health.maximum))
-        fill_width = round(width * fraction)
+        fraction = min(1.0, current / health.maximum)
+        fill_width = round(width * current / total)
         if fill_width > 0:
             pygame.draw.rect(
                 surface, _fill_color(fraction), (bar.x, bar.y, fill_width, HEIGHT)
             )
 
-        buffs = world.try_get_component(entity, ActiveBuffs)
-        bonus = 0.0 if buffs is None else sum(b.bonus_health for b in buffs.buffs)
-        bonus_width = min(width - fill_width, round(width * bonus / health.maximum))
+        bonus_width = min(width - fill_width, round(width * bonus / total))
         if bonus_width > 0:
             pygame.draw.rect(
                 surface, BONUS_COLOR, (bar.x + fill_width, bar.y, bonus_width, HEIGHT)
