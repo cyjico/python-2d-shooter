@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from game.components.player import Player
+from game.components.faction import Team
 
 
 @dataclass(slots=True)
 class Breakable:
-    """Destroyed once its durability runs out, but only by damage from a `broken_by` entity."""
+    """Destroyed once its durability runs out, but only by damage from a source on `broken_by`."""
 
     durability: float
-    broken_by: type = Player
-    """Component type the damage source must have (e.g. Player, Enemy)."""
+    broken_by: Team = Team.PLAYER
+    """Team the damage source must be on."""

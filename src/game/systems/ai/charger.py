@@ -6,10 +6,8 @@ from game.components.ai import AI
 from game.components.ai.charger import ChargerAI, ChargerAIState
 from game.components.ai.hover_around_target import HoverAroundTargetAI
 from game.components.convex_collider import ConvexCollider
-from game.components.enemy import Enemy
 from game.components.health import Health
 from game.components.mover import Mover
-from game.components.player import Player
 from game.components.rigid_body import RigidBody
 from game.components.shape import Shape
 from game.components.transform import Transform
@@ -18,6 +16,7 @@ from game.core_ecs.world import World
 from game.events.collision import CollisionEvent, directed
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
+from game.util.factions import is_hostile
 from game.util.geometry import angle_of, rot_to_vec2
 
 
@@ -158,9 +157,7 @@ def _resolve_contacts(world: World, events: EventBus, me: Entity, others: list[E
 
         if not world.has_component(other, RigidBody):
             hit_wall = True
-        elif world.has_component(other, Health) and not world.has_component(
-            other, charger.component_mask
-        ):
+        elif world.has_component(other, Health) and is_hostile(world, me, other):
             events.emit(DamageEvent(other, charger.contact_damage, me))
             hit_target = True
 

@@ -1,18 +1,16 @@
 from dataclasses import dataclass, field
 
-from game.components.player import Player
 from game.core_ecs.entity import Entity
 
 
 @dataclass(slots=True)
 class ContactDamage:
-    """Damages entities it touches. Each victim is hit at most once per `cooldown`."""
+    """Damages hostile entities it touches (see `is_hostile`). Each victim is hit
+    at most once per `cooldown`. Victims also need Health."""
 
     amount: float
     cooldown: float = 0.75
     """Seconds before the same victim can be hit again."""
-    hits: type = Player
-    """Component type a victim must have (e.g. Player, Enemy). It also needs Health."""
 
     # Runtime state
     cooldowns: dict[Entity, float] = field(default_factory=dict)

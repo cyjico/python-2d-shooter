@@ -4,6 +4,7 @@ from game.core_ecs.world import World
 from game.events.collision import CollisionEvent, directed
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
+from game.util.factions import is_hostile
 
 
 def contact_damage_system(world: World, dt: float):
@@ -18,7 +19,7 @@ def contact_damage_system(world: World, dt: float):
         contact = world.try_get_component(me, ContactDamage)
         if contact is None:
             continue
-        if not world.has_component(other, contact.hits):
+        if not is_hostile(world, me, other):
             continue
         if not world.has_component(other, Health):
             continue

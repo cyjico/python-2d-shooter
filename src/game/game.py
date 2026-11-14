@@ -7,6 +7,7 @@ import pygame
 from game.components.camera_target import CameraTarget
 from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash, DashIntent
+from game.components.faction import Team
 from game.components.health import Health
 from game.components.hud import (
     BuffStatusLabel,
@@ -82,6 +83,7 @@ from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
 from game.systems.weapon import weapon_system
 from game.systems.weapon_status_hud import weapon_status_hud_system
+from game.util.factions import Faction
 
 
 class Game:
@@ -119,6 +121,7 @@ class Game:
 
         self.player = self.world.create_entity(
             Player(),
+            Faction(Team.PLAYER),
             Health(maximum=100),
             Loadout(slots=[Gun.full(PISTOL)]),
             WeaponIntent(),

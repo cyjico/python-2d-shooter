@@ -5,8 +5,6 @@ from enum import Enum, auto
 import pygame
 
 from game.components.ai.hover_around_target import HoverAroundTargetAI
-from game.components.enemy import Enemy
-from game.core_ecs.world import World
 
 
 class ChargerAIState(Enum):
@@ -18,8 +16,6 @@ class ChargerAIState(Enum):
 
 @dataclass(slots=True)
 class ChargerAI:
-    component_mask: type
-
     hover_time: tuple[float, float] = (4.0, 5.0)
     """Random seconds spent in range before winding up."""
     windup_time: float = 2

@@ -2,18 +2,19 @@ from game.components.breakable import Breakable
 from game.core_ecs.world import World
 from game.events.combat import BrokenEvent, DamageEvent
 from game.resources.event_bus import EventBus
+from game.util.factions import team_of
 
 
 def breakable_system(world: World):
-    """Wears down Breakables and emits BrokenEvent. Run after anything that emits DamageEvent."""
+    """Wears down Breakables and emits BrokenEvent."""
     events = world.get_resource(EventBus)
 
     for damage in events.read(DamageEvent):
         breakable = world.try_get_component(damage.target, Breakable)
         if breakable is None or breakable.durability <= 0:
             continue
-        if damage.source is None or not world.has_component(
-            damage.source, breakable.broken_by
+        if damage.source is None or not (
+            team_of(world, damage.source) & breakable.broken_by
         ):
             continue
 

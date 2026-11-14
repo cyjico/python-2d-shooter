@@ -9,7 +9,7 @@ from game.components.bounty import Bounty
 from game.components.contact_damage import ContactDamage
 from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash, DashIntent
-from game.components.enemy import Enemy
+from game.components.faction import Team
 from game.components.health import Health
 from game.components.mover import Mover
 from game.components.rigid_body import box_body
@@ -17,6 +17,7 @@ from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from game.util.factions import Faction
 from game.util.geometry import regular_polygon
 
 CHARGER_RADIUS = 16
@@ -30,11 +31,11 @@ CHASER_COLOR = (220, 70, 70)
 def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
     vertices = regular_polygon(5, CHARGER_RADIUS)
 
-    charger_ai = ChargerAI(component_mask=Enemy, charge_distance_sqr=800**2)
+    charger_ai = ChargerAI(charge_distance_sqr=800**2)
 
     return world.create_entity(
         AI(target=player),
-        Enemy(),
+        Faction(Team.ENEMY),
         charger_ai,
         HoverAroundTargetAI(),
         Mover(move_speed=150),
@@ -52,7 +53,7 @@ def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
 
     return world.create_entity(
         AI(target=player, body_radius=CHASER_RADIUS),
-        Enemy(),
+        Faction(Team.ENEMY),
         FollowTargetAI(),
         RandomDashAI(),
         Mover(move_speed=160),
