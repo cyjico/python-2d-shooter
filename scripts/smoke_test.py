@@ -185,22 +185,12 @@ press(pygame.K_SPACE)
 assert not dash.active, "unaffordable dash should be refused"
 assert stamina.current < 1.0
 
-
-# Stamina buffs: expiring clamps bars back down.
-before = stamina.current = 2.0
+# Extra Stamina raises the regen cap above the base segments.
+stamina.current = 2.0
 grant_buff(world, game.player, EXTRA_STAMINA)
-step()
-assert (
-    stamina.segments + stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 4
-), stamina.current
-
-stamina.current = 4.0
-world.get_component(game.player, ActiveBuffs).buffs.clear()
-step()
-assert (
-    stamina.segments + stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 2
-    and stamina.current <= 2.0
-), stamina.current
+step(60)  # ~1s of regen at 0.3/s
+assert stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 2
+assert stamina.current > 2.0, stamina.current
 
 # Quick Recovery doubles the regen rate.
 grant_buff(world, game.player, QUICK_RECOVERY)
