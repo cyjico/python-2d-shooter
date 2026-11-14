@@ -31,9 +31,9 @@ INTERVAL_HALF_LIFE = 90.0
 """Seconds survived for the gap between START_INTERVAL and MIN_INTERVAL to halve."""
 
 # How many
-INITIAL_ENEMIES = 6
+INITIAL_ENEMIES = 2
 """Enemies spawned off screen on the first update, ignoring the cap."""
-START_MAX_ENEMIES = 20
+START_MAX_ENEMIES = 8
 """Alive-enemy cap at the start (map-placed enemies count too)."""
 EXTRA_ENEMY_EVERY = 20.0
 """One more enemy allowed per this many seconds survived."""
@@ -50,9 +50,9 @@ class EnemySpawnEntry:
 
 
 ENEMY_TABLE: tuple[EnemySpawnEntry, ...] = (
-    EnemySpawnEntry(spawn_chaser, weight=10),
-    EnemySpawnEntry(spawn_splitter, weight=4, unlock_time=8.0),
-    EnemySpawnEntry(spawn_charger, weight=3, unlock_time=16.0),
+    EnemySpawnEntry(spawn_chaser, weight=4, unlock_time=0.0),
+    EnemySpawnEntry(spawn_splitter, weight=6, unlock_time=2.0),
+    EnemySpawnEntry(spawn_charger, weight=5, unlock_time=8.0),
 )
 """At least one entry must have `unlock_time` 0."""
 
