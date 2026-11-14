@@ -6,7 +6,7 @@ from dataclasses import dataclass, replace
 
 from game.components.loadout import Gun, GunSpec, Rarity
 from game.constants.guns import ALL_GUNS
-from game.constants.rarity import RARITIES, roll_rarity
+from game.constants.rarity import roll_rarity
 from game.util.rng import resolve_rng
 
 
@@ -62,10 +62,10 @@ GUN_BUFFS: dict[str, GunBuff] = {
 
 
 def buffed_spec(spec: GunSpec, rarity: Rarity):
-    """`spec` with its gun type's buff applied at `rarity`, renamed e.g. "Rare Shotgun"."""
+    """`spec` with its gun type's buff applied at `rarity`. The name stays the
+    same; the rarity is shown as stars next to it."""
     buff = GUN_BUFFS[spec.id]
-    buffed = buff.apply(spec, buff.values[rarity.value])
-    return replace(buffed, name=f"{RARITIES[rarity].name} {spec.name}")
+    return buff.apply(spec, buff.values[rarity.value])
 
 
 def make_gun(spec: GunSpec, rarity: Rarity):

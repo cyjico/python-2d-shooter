@@ -29,12 +29,17 @@ from game.constants.enemy_spawning import (
 )
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
-from game.game import Game
+from game.components.particle import Particle, Spark
+from game.components.shape import Shape
+from game.constants.rarity import rarity_stars
+from game.game import Game, GameState
 from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
+from game.components.projectile import Projectile
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.camera import Camera
 from game.resources.enemy_director import EnemyDirector
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.resources.run_stats import RunStats
 from game.resources.ui_state import UIState
 from game.systems.enemy_spawn import enemy_spawn_system
 from game.systems.offscreen_despawn import offscreen_despawn_system
@@ -46,6 +51,15 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 game = Game()
+
+# The game opens on the main menu; its Play button starts a run.
+assert game.state is GameState.MENU and game.player is None
+pygame.mouse.get_pos = lambda: (400, 300)  # the dummy driver has no real mouse
+pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(400, 300)))
+pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(400, 300)))
+game.handle_events()
+game.update(1 / 60)
+assert game.state is GameState.PLAYING and game.player is not None
 
 world = game.world
 session = world.get_resource(MysteryBoxSession)
@@ -74,6 +88,12 @@ def press(key: int):
     step()
 
 
+def click(button: int):
+    pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=button))
+    pygame.event.post(pygame.event.Event(pygame.MOUSEBUTTONUP, button=button))
+    step()
+
+
 def wait_for_offer():
     for _ in range(120):
         if session.phase is BoxPhase.OFFER:
@@ -99,6 +119,11 @@ for base in ALL_GUNS.values():
         assert spec.damage >= base.damage and spec.fire_rate >= base.fire_rate
         assert spec.magazine_size >= base.magazine_size
         assert spec.pellets >= base.pellets and spec.pierce >= base.pierce
+        assert spec.name == base.name  # rarity shows as stars, not in the name
+
+# One star per tier, plain guns none.
+assert [rarity_stars(r) for r in Rarity] == [1, 2, 3, 4, 5]
+assert rarity_stars(None) == 0
 
 # Pistol-only start, 800 money, box costs 200.
 assert [g.spec.id for g in loadout.slots] == ["pistol"], loadout.slots
@@ -109,6 +134,7 @@ stand_next_to_box()
 press(pygame.K_e)
 assert session.phase is BoxPhase.ROLLING and wallet.balance == 600
 assert ui_state.blocks_gameplay_input
+assert world.get_resource(RunStats).boxes_opened == 1
 wait_for_offer()
 
 # Reroll costs 200 more.
@@ -132,38 +158,71 @@ assert new_box_pos.distance_to(old_box_pos) >= 240
 points = world.get_component(game.mystery_box, Relocatable).points
 assert new_box_pos in points
 
-# Number keys switch slots.
+# Number keys switch slots; F cycles.
 press(pygame.K_2)
 assert loadout.active == 1
 press(pygame.K_1)
 assert loadout.active == 0
+press(pygame.K_f)
+assert loadout.active == 1
+press(pygame.K_f)
+assert loadout.active == 0
 
-# Full slots: taking asks which slot to replace.
+# Full slots: taking swaps out the gun in hand, no questions asked.
 wallet.balance = 10_000
+press(pygame.K_2)  # hold the pistol
+primary = loadout.slots[0]
 stand_next_to_box()
 press(pygame.K_e)
 wait_for_offer()
 offered = session.offer
-primary = loadout.slots[0]
 press(pygame.K_e)
-assert session.phase is BoxPhase.CHOOSE_SLOT
-press(pygame.K_ESCAPE)  # back
-assert session.phase is BoxPhase.OFFER
-press(pygame.K_e)
-press(pygame.K_2)
 assert session.phase is BoxPhase.CLOSED
 assert loadout.slots == [primary, offered] and loadout.active == 1
 assert box.price == round((570 + 200) * 0.95)
 
-# Walking away loses the gun and steps the price.
+# Walking away (Q) loses the gun and steps the price.
 stand_next_to_box()
 price = box.price
 press(pygame.K_e)
 wait_for_offer()
-press(pygame.K_ESCAPE)
+press(pygame.K_q)
 assert session.phase is BoxPhase.CLOSED
 assert loadout.slots == [primary, offered]
 assert box.price == price + 200
+assert world.get_resource(RunStats).boxes_opened == 3
+
+# Right click reloads.
+gun = loadout.equipped
+gun.magazine = 0
+gun.reserve = gun.spec.max_reserve
+click(3)
+assert gun.reloading, "right click should reload"
+gun.reload_remaining = 0.001
+step()
+assert gun.magazine == gun.spec.magazine_size
+
+# Bullets start at the player's center and draw underneath the player.
+player_t = world.get_component(game.player, Transform)
+before = {e for e, _ in world.query(Projectile)}
+gun.cooldown = 0.0
+click(1)
+(bullet,) = {e for e, _ in world.query(Projectile)} - before
+assert world.get_component(bullet, Shape).layer < world.get_component(game.player, Shape).layer
+world.destroy_entity(bullet)
+
+# A player bullet hitting something spawns 2-3 sparks.
+sparks_before = sum(1 for _ in world.query(Spark))
+slow = replace(ALL_GUNS["pistol"], projectile_speed=1.0)
+crate_pos = pygame.Vector2(260, 220)
+from game.prefabs.crate import spawn_crate  # noqa: E402
+
+crate = spawn_crate(world, crate_pos)
+spawn_gun_projectile(world, game.player, crate_pos, 0.0, slow)
+step()
+assert 2 <= sum(1 for _ in world.query(Spark)) - sparks_before <= 3
+if world.is_alive(crate):
+    world.destroy_entity(crate)
 
 
 KILL_SPOT = pygame.Vector2(260, 220)
@@ -187,8 +246,14 @@ def kill_charger():
 
 
 before = wallet.balance
+earned_before = wallet.total_earned
+kills_before = world.get_resource(RunStats).enemies_killed
+gibs_before = sum(1 for _ in world.query(Particle))
 bounty = kill_charger()
 assert wallet.balance == before + bounty, wallet.balance
+assert wallet.total_earned == earned_before + bounty
+assert world.get_resource(RunStats).enemies_killed == kills_before + 1
+assert sum(1 for _ in world.query(Particle)) - gibs_before >= 6, "enemy gibs"
 
 grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
 before = wallet.balance
@@ -337,5 +402,30 @@ offscreen_despawn_system(world, 0.6)
 assert not world.is_alive(stuck)
 
 step(60)
+
+# Death: the world freezes, the player shakes, shatters, then the stats show.
+enemy = spawn_chaser(world, KILL_SPOT, game.player)
+world.get_component(enemy, RigidBody).linear_velocity.update(300, 0)
+world.get_component(game.player, Health).current = 0
+step()
+assert game.state is GameState.DYING
+frozen_at = pygame.Vector2(world.get_component(enemy, Transform).position)
+step(30)
+assert world.get_component(enemy, Transform).position == frozen_at, "world should freeze"
+step(35)  # past the 1s shake
+assert not world.has_component(game.player, Shape), "player should have shattered"
+assert any(p.keeps_moving_when_frozen for _, (p,) in world.query(Particle))
+step(60 * 3)
+assert game.state is GameState.GAME_OVER
+
+# Play (below the stats, at the screen's center + 100px) starts a fresh run.
+old_world = world
+pygame.mouse.get_pos = lambda: (400, 400)
+click(1)
+assert game.state is GameState.PLAYING
+assert game.world is not old_world
+assert game.world.get_resource(RunStats).enemies_killed == 0
+assert game.world.has_component(game.player, Shape)
+step(30)
 
 print("Smoke test passed")

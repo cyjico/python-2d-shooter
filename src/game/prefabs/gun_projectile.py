@@ -9,6 +9,7 @@ from game.components.projectile import Projectile
 from game.components.rigid_body import RigidBody
 from game.components.shape import Shape
 from game.components.transform import Transform
+from game.constants import layers
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.util.geometry import rectangle
@@ -29,7 +30,7 @@ def spawn_gun_projectile(
         Transform(position=pygame.Vector2(origin), rotation=angle),
         # Moved by the regular physics system. No inertia = no spin, no drag.
         RigidBody(mass=1.0, linear_velocity=direction * spec.projectile_speed),
-        Shape(vertices=vertices, color=spec.projectile_color),
+        Shape(vertices=vertices, color=spec.projectile_color, layer=layers.PROJECTILES),
         ConvexCollider(vertices=vertices, bounciness=0.0, is_trigger=True),
         Projectile(
             owner=shooter,

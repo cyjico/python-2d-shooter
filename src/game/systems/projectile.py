@@ -1,5 +1,7 @@
 import random
 
+import pygame
+
 from game.components.breakable import Breakable
 from game.components.convex_collider import ConvexCollider
 from game.components.health import Health
@@ -9,7 +11,7 @@ from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.events.collision import CollisionEvent
-from game.events.combat import DamageEvent
+from game.events.combat import DamageEvent, ProjectileHitEvent
 from game.resources.event_bus import EventBus
 
 
@@ -18,11 +20,20 @@ def projectile_system(world: World):
     events = world.get_resource(EventBus)
 
     for collision in events.read(CollisionEvent):
-        _handle_hit(world, events, collision.entity_a, collision.entity_b)
-        _handle_hit(world, events, collision.entity_b, collision.entity_a)
+        # The normal points from A to B, so A gets out of B by moving against it.
+        out_of_b = -collision.normal * collision.depth
+        _handle_hit(world, events, collision.entity_a, collision.entity_b, out_of_b)
+        _handle_hit(world, events, collision.entity_b, collision.entity_a, -out_of_b)
 
 
-def _handle_hit(world: World, events: EventBus, bullet: Entity, other: Entity):
+def _handle_hit(
+    world: World,
+    events: EventBus,
+    bullet: Entity,
+    other: Entity,
+    push_out: pygame.Vector2,
+):
+    """`push_out` moves the bullet back out of `other`, to its surface."""
     projectile = world.try_get_component(bullet, Projectile)
     # Ensure entity was not destroyed.
     if projectile is None:
@@ -39,6 +50,7 @@ def _handle_hit(world: World, events: EventBus, bullet: Entity, other: Entity):
         return
 
     projectile.hit.add(other)
+    _emit_hit(world, events, bullet, projectile, other, push_out)
 
     if world.has_component(other, Health) or world.has_component(other, Breakable):
         critical = random.random() < projectile.crit_chance
@@ -51,6 +63,31 @@ def _handle_hit(world: World, events: EventBus, bullet: Entity, other: Entity):
         projectile.pierce_left -= 1
     else:
         world.destroy_entity(bullet)
+
+
+def _emit_hit(
+    world: World,
+    events: EventBus,
+    bullet: Entity,
+    projectile: Projectile,
+    other: Entity,
+    push_out: pygame.Vector2,
+):
+    transform = world.get_component(bullet, Transform)
+    body = world.try_get_component(bullet, RigidBody)
+    if body is not None and body.linear_velocity.length_squared() > 0:
+        direction = body.linear_velocity.normalize()
+    else:
+        direction = pygame.Vector2(1, 0).rotate_rad(transform.rotation)
+
+    events.emit(
+        ProjectileHitEvent(
+            projectile.owner,
+            other,
+            transform.position + push_out,
+            direction,
+        )
+    )
 
 
 def _apply_knockback(

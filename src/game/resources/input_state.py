@@ -11,10 +11,15 @@ class InputState:
     primary_pressed: bool = False
     primary_released: bool = False
     reload_pressed: bool = False
+    """Right click."""
     weapon_switch: int = 0
-    """-1 / 0 / +1, from the mouse wheel or Q."""
+    """-1 / 0 / +1, from the mouse wheel or F."""
     dash_pressed: bool = False
     slot_pressed: int | None = None
     """Loadout slot picked with the number keys this frame (1 -> 0, 2 -> 1)."""
     interact_pressed: bool = False
+    """E."""
+    reroll_pressed: bool = False
+    """R, used by the mystery box."""
     cancel_pressed: bool = False
+    """Q, used to decline the mystery box."""

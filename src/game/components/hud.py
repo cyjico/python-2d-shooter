@@ -34,5 +34,5 @@ class BuffStatusLabel:
 
 
 @dataclass(slots=True)
-class StaminaGauge:
-    """Marks a UIGauge that shows the player's stamina."""
+class ScreenUI:
+    """Marks UI of a full-screen menu (main menu, game over)."""

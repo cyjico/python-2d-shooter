@@ -128,8 +128,10 @@ class Loadout:
     slots: list[Gun] = field(default_factory=list)
     active: int = 0
     max_slots: int = 2
-    muzzle: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(24, 0))
-    """Where projectiles spawn. Local to the entity's transform."""
+    muzzle: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    """Where projectiles spawn. Local to the entity's transform. The default
+    (the center) means there's no dead zone right in front of the shooter:
+    an enemy touching its nose still gets hit."""
 
     @property
     def equipped(self):

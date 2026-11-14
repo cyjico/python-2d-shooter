@@ -21,6 +21,8 @@ class UIRect:
 @dataclass(slots=True)
 class UIPanel:
     color: tuple[int, int, int] = (50, 50, 50)
+    alpha: int = 255
+    """0 = invisible, 255 = opaque."""
 
 
 @dataclass(slots=True)
@@ -34,6 +36,8 @@ class UILabel:
     text: str
     size: int = 20
     color: tuple[int, int, int] = (255, 255, 255)
+    stars: int = 0
+    """Stars drawn after the text, in the same color (e.g. a gun's rarity)."""
 
 
 class ButtonState(Enum):
@@ -51,6 +55,8 @@ class UIButton:
     normal_color: tuple[int, int, int] = (70, 70, 70)
     hovered_color: tuple[int, int, int] = (100, 100, 100)
     pressed_color: tuple[int, int, int] = (40, 40, 40)
+    alpha: int = 255
+    """0 = invisible, 255 = opaque."""
 
 
 @dataclass(slots=True)

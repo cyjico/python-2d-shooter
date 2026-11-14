@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 
 import pygame
 
+from game.constants import layers
+
 
 @dataclass(slots=True)
 class Shape:
@@ -9,6 +11,8 @@ class Shape:
     """Local to the entity's transform."""
     color: tuple[int, int, int] = (80, 200, 120)
     """From 0 to 255 in RGB format."""
+    layer: int = layers.DEFAULT
+    """Draw order; lower draws underneath. See `constants.layers`."""
 
     radius: float = field(init=False)
     """Bounding-circle radius around the transform origin. Computed once."""

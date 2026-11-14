@@ -1,5 +1,6 @@
 import math
 import random
+from enum import Enum, auto
 from pathlib import Path
 
 import pygame
@@ -14,7 +15,6 @@ from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
-    StaminaGauge,
     WeaponStatusLabel,
 )
 from game.components.loadout import Gun, Loadout
@@ -26,7 +26,7 @@ from game.components.shape import Shape
 from game.components.spawner import Spawner
 from game.components.stamina import Stamina
 from game.components.transform import Transform
-from game.components.ui import UIGauge, UILabel, UIPanel, UIRect
+from game.components.ui import UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.components.weapon_intent import WeaponIntent
 from game.constants.guns import PISTOL
@@ -36,6 +36,7 @@ from game.constants.spawning import (
 )
 from game.core.settings import DEFAULT_SETTINGS
 from game.core_ecs.world import World
+from game.events.ui import ButtonClickedEvent
 from game.map_loader import TILE_SIZE, MapSpawns, load_map
 from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
@@ -45,7 +46,9 @@ from game.resources.enemy_director import EnemyDirector
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import MysteryBoxSession
+from game.resources.run_stats import RunStats
 from game.resources.ui_state import UIState
+from game.screens import PLAY_ACTION, build_game_over, build_main_menu
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
@@ -57,11 +60,18 @@ from game.systems.buff_hud import buff_hud_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
 from game.systems.contact_damage import contact_damage_system
+from game.systems.cursor import cursor_render_system
 from game.systems.damage_numbers import (
     damage_number_render_system,
     damage_number_spawn_system,
 )
 from game.systems.dash import dash_impact_system, dash_system
+from game.systems.death_sequence import (
+    DeathSequence,
+    death_sequence_system,
+    run_stats_system,
+    start_death_sequence,
+)
 from game.systems.drift import drift_system
 from game.systems.enemy_spawn import enemy_spawn_system
 from game.systems.health import death_cleanup_system, health_system
@@ -70,7 +80,11 @@ from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
 from game.systems.lifetime import lifetime_system
 from game.systems.mover import mover_system
-from game.systems.mystery_box import mystery_box_system
+from game.systems.mystery_box import (
+    close_session,
+    mystery_box_price_render_system,
+    mystery_box_system,
+)
 from game.systems.offscreen_despawn import offscreen_despawn_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
@@ -81,13 +95,29 @@ from game.systems.rendering import render_system
 from game.systems.spawner import spawner_system
 from game.systems.split_on_death import split_on_death_system
 from game.systems.stamina import stamina_system
-from game.systems.stamina_hud import stamina_hud_system
+from game.systems.stamina_dots import stamina_dots_render_system
 from game.systems.ui.interaction import ui_interaction_system
 from game.systems.ui.layout import ui_layout_system
 from game.systems.ui.render import ui_render_system
+from game.systems.vfx import (
+    gib_spawn_system,
+    particle_system,
+    spark_render_system,
+    spark_spawn_system,
+)
 from game.systems.weapon import weapon_system
 from game.systems.weapon_status_hud import weapon_status_hud_system
 from game.util.factions import Faction
+
+
+class GameState(Enum):
+    MENU = auto()
+    """Main menu: only a Play button."""
+    PLAYING = auto()
+    DYING = auto()
+    """The player died: the world is frozen while the player shakes and shatters."""
+    GAME_OVER = auto()
+    """Run stats and a Play button over the frozen world."""
 
 
 class Game:
@@ -103,16 +133,38 @@ class Game:
         # --- Timing ---
         self.clock = pygame.time.Clock()
 
-        # --- ECS ---
-        self.world = World()
+        # --- Main menu ---
+        self.world = self._new_world()
+        build_main_menu(self.world)
+        ui_layout_system(self.world)
+        self.player = None
+        self.mystery_box = None
+        self._set_state(GameState.MENU)
 
-        # --- Resources ---
-        self.world.add_resource(Camera(self.settings.window_size))
-        self.world.add_resource(InputState())
-        self.world.add_resource(EventBus())
-        self.world.add_resource(AssetStore(Path(__file__).parent / "assets"))
-        self.world.add_resource(UIState())
+        # --- Game state ---
+        self.running = True
+        self.events: list[pygame.event.Event] = []
+
+    def _new_world(self):
+        """An empty world with the resources every screen needs."""
+        world = World()
+        world.add_resource(Camera(self.settings.window_size))
+        world.add_resource(InputState())
+        world.add_resource(EventBus())
+        world.add_resource(AssetStore(Path(__file__).parent / "assets"))
+        world.add_resource(UIState())
+        return world
+
+    def _set_state(self, state: GameState):
+        self.state = state
+        # The crosshair cursor replaces the system one during gameplay only.
+        pygame.mouse.set_visible(state is not GameState.PLAYING)
+
+    def start_run(self):
+        """Starts a new run in a fresh world, replacing whatever was there."""
+        self.world = self._new_world()
         self.world.add_resource(MysteryBoxSession())
+        self.world.add_resource(RunStats())
 
         # --- Entities ---
         player_verts = (
@@ -164,13 +216,14 @@ class Game:
             WeaponStatusLabel(),
         )
 
-        # Inventory slots, bottom center: 1 = primary, 2 = secondary.
-        slot_w, slot_gap = 190, 6
-        for index in range(2):
-            x = (index - 0.5) * (slot_w + slot_gap)
+        # Inventory slots, bottom left, stacked: 1 = primary on top.
+        slot_w, slot_h, slot_gap = 190, 36, 6
+        slot_count = 2
+        for index in range(slot_count):
+            y = -16 - (slot_count - 1 - index) * (slot_h + slot_gap)
             self.world.create_entity(
                 UIRect(
-                    anchor=(0.5, 1), pivot=(0.5, 1), offset=(x, -16), size=(slot_w, 36)
+                    anchor=(0, 1), pivot=(0, 1), offset=(16, y), size=(slot_w, slot_h)
                 ),
                 UIPanel(),
                 UILabel("", 18),
@@ -183,7 +236,7 @@ class Game:
             MoneyLabel(),
         )
         self.world.create_entity(
-            UIRect(anchor=(0.5, 1), pivot=(0.5, 1), offset=(0, -60), size=(500, 24)),
+            UIRect(anchor=(0.5, 1), pivot=(0.5, 1), offset=(0, -20), size=(500, 24)),
             UILabel(""),
             InteractPromptLabel(),
         )
@@ -194,15 +247,8 @@ class Game:
             BuffStatusLabel(),
         )
 
-        self.world.create_entity(
-            UIRect(anchor=(0, 1), pivot=(0, 1), offset=(16, -16), size=(180, 16)),
-            UIGauge(segments=2),
-            StaminaGauge(),
-        )
-
-        # --- Game state ---
-        self.running = True
-        self.events: list[pygame.event.Event] = []
+        ui_layout_system(self.world)
+        self._set_state(GameState.PLAYING)
 
     def handle_events(self):
         self.events = pygame.event.get()
@@ -214,6 +260,29 @@ class Game:
     def update(self, dt: float):
         self.world.get_resource(EventBus).clear()
 
+        match self.state:
+            case GameState.MENU:
+                self._screen_update()
+            case GameState.PLAYING:
+                self._play_update(dt)
+            case GameState.DYING:
+                self._dying_update(dt)
+            case GameState.GAME_OVER:
+                # Death shards may still be settling.
+                particle_system(self.world, dt, frozen=True)
+                self._screen_update()
+
+    def _screen_update(self):
+        """Main menu and game over: only the UI runs."""
+        input_system(self.world, self.events)
+        ui_layout_system(self.world)
+        ui_interaction_system(self.world)
+
+        clicks = self.world.get_resource(EventBus).read(ButtonClickedEvent)
+        if any(click.action == PLAY_ACTION for click in clicks):
+            self.start_run()
+
+    def _play_update(self, dt: float):
         self._input_phase()
         self._upkeep_phase(dt)
         self._intent_phase(dt)
@@ -223,6 +292,40 @@ class Game:
         self._damage_phase()
         self._cleanup_phase(dt)
         self._hud_phase()
+
+        self.world.get_resource(RunStats).time_survived += dt
+        if self._player_is_dead():
+            self._begin_death()
+
+    def _dying_update(self, dt: float):
+        """Everything is frozen except the player's shake and shards."""
+        input_system(self.world, self.events)
+        death_sequence_system(self.world, dt)
+        particle_system(self.world, dt, frozen=True)
+
+        if self.world.get_resource(DeathSequence).finished:
+            self._show_game_over()
+
+    def _player_is_dead(self):
+        assert self.player is not None
+        health = self.world.try_get_component(self.player, Health)
+        return health is not None and health.current <= 0
+
+    def _begin_death(self):
+        assert self.player is not None
+        # Closes an open mystery box menu, which also hands input back.
+        close_session(self.world)
+        start_death_sequence(self.world, self.player)
+        self._set_state(GameState.DYING)
+
+    def _show_game_over(self):
+        assert self.player is not None
+        wallet = self.world.get_component(self.player, Wallet)
+        build_game_over(
+            self.world, self.world.get_resource(RunStats), wallet.total_earned
+        )
+        ui_layout_system(self.world)
+        self._set_state(GameState.GAME_OVER)
 
     def _input_phase(self):
         """Raw input, then UI layout and hit-testing."""
@@ -276,6 +379,8 @@ class Game:
         charger_ai_collision_system(self.world)
         contact_damage_system(self.world, dt)
         projectile_system(self.world)
+        # Reads the ProjectileHitEvents just emitted.
+        spark_spawn_system(self.world)
 
     def _damage_phase(self):
         """Applies damage and reacts to it. The dead and broken still exist here
@@ -283,6 +388,9 @@ class Game:
         health_system(self.world)
         damage_number_spawn_system(self.world)
         bounty_system(self.world)
+        run_stats_system(self.world)
+        # Reads the dead enemy's shape, so before cleanup.
+        gib_spawn_system(self.world)
         split_on_death_system(self.world)
         breakable_system(self.world)
         # Reads the BrokenEvents just emitted.
@@ -293,12 +401,12 @@ class Game:
         break_cleanup_system(self.world)
         death_cleanup_system(self.world)
         lifetime_system(self.world, dt)
+        particle_system(self.world, dt)
         offscreen_despawn_system(self.world, dt)
 
     def _hud_phase(self):
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
-        stamina_hud_system(self.world)
         buff_hud_system(self.world)
 
         # UI created this frame needs its rect before rendering on the next frame.
@@ -307,10 +415,18 @@ class Game:
     def render(self):
         self.screen.fill(self.settings.background_color)
 
-        render_system(self.world, self.screen)
-        health_bar_render_system(self.world, self.screen)
-        damage_number_render_system(self.world, self.screen)
+        if self.state is not GameState.MENU:
+            render_system(self.world, self.screen)
+            spark_render_system(self.world, self.screen)
+            mystery_box_price_render_system(self.world, self.screen)
+            health_bar_render_system(self.world, self.screen)
+            stamina_dots_render_system(self.world, self.screen)
+            damage_number_render_system(self.world, self.screen)
+
         ui_render_system(self.world, self.screen)
+
+        if self.state is GameState.PLAYING:
+            cursor_render_system(self.world, self.screen)
 
         pygame.display.flip()
 

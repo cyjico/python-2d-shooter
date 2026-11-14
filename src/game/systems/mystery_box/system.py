@@ -20,6 +20,7 @@ from game.events.ui import ButtonClickedEvent
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.resources.run_stats import RunStats
 from game.resources.ui_state import UIState
 from game.systems.mystery_box.menu import clear_menu, set_prompt, show_menu
 from game.systems.mystery_box.placement import nearest_box
@@ -73,8 +74,6 @@ def mystery_box_system(world: World, dt: float, rng: random.Random | None = None
             _rolling(f)
         case BoxPhase.OFFER:
             _offer(f)
-        case BoxPhase.CHOOSE_SLOT:
-            _choose_slot(f)
 
 
 # Phases
@@ -102,6 +101,7 @@ def _closed(f: _Frame):
         f.wallet.spend(box.price)
         f.session.box = entity
         f.session.last_paid = box.price
+        f.world.get_resource(RunStats).boxes_opened += 1
         set_prompt(f.world, "")
         _start_roll(f)
 
@@ -134,11 +134,12 @@ def _offer(f: _Frame):
     if "box_take" in f.clicked or f.inputs.interact_pressed:
         if len(f.loadout.slots) < f.loadout.max_slots:
             f.loadout.put_primary(session.offer)
-            _finish(f)
         else:
-            _set_phase(f, BoxPhase.CHOOSE_SLOT)
+            # Full: the gun in hand is swapped out for the new one.
+            f.loadout.replace(f.loadout.active, session.offer)
+        _finish(f)
 
-    elif ("box_reroll" in f.clicked or f.inputs.reload_pressed) and f.wallet.can_afford(
+    elif ("box_reroll" in f.clicked or f.inputs.reroll_pressed) and f.wallet.can_afford(
         reroll_cost
     ):
         f.wallet.spend(reroll_cost)
@@ -150,21 +151,6 @@ def _offer(f: _Frame):
         # Walking away loses the gun, same price penalty as a reroll.
         box.price = stepped_price(session.last_paid)
         _close(f)
-
-
-def _choose_slot(f: _Frame):
-    assert f.session.offer is not None
-
-    index = f.inputs.slot_pressed
-    for i in range(len(f.loadout.slots)):
-        if f"box_slot_{i}" in f.clicked:
-            index = i
-
-    if index is not None and 0 <= index < len(f.loadout.slots):
-        f.loadout.replace(index, f.session.offer)
-        _finish(f)
-    elif "box_back" in f.clicked or f.inputs.cancel_pressed:
-        _set_phase(f, BoxPhase.OFFER)
 
 
 # Transitions
@@ -192,9 +178,15 @@ def _finish(f: _Frame):
 
 
 def _close(f: _Frame):
-    session = f.session
+    close_session(f.world)
+
+
+def close_session(world: World):
+    """Ends any open box interaction and removes its menu. Safe to call anytime."""
+    session = world.get_resource(MysteryBoxSession)
     session.phase = BoxPhase.CLOSED
     session.box = None
     session.offer = None
     session.rolling_label = None
-    clear_menu(f.world)
+    clear_menu(world)
+    set_prompt(world, "")

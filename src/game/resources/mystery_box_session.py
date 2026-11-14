@@ -11,8 +11,6 @@ class BoxPhase(Enum):
     """Paid; cycling gun names before revealing the result."""
     OFFER = auto()
     """Showing the rolled gun: take, reroll or leave."""
-    CHOOSE_SLOT = auto()
-    """Taking the gun with full slots: pick which one to replace."""
 
 
 @dataclass(slots=True)

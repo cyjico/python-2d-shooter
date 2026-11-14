@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import pygame
+
 from game.core_ecs.entity import Entity
 
 
@@ -25,6 +27,18 @@ class DamageTakenEvent:
 class EntityDiedEvent:
     entity: Entity
     killer: Entity | None = None
+
+
+@dataclass(slots=True)
+class ProjectileHitEvent:
+    """A projectile struck something solid (wall, crate, enemy, ...)."""
+
+    shooter: Entity
+    target: Entity
+    position: pygame.Vector2
+    """Roughly where the projectile met the target's surface."""
+    direction: pygame.Vector2
+    """Unit vector the projectile was travelling in."""
 
 
 @dataclass(slots=True)

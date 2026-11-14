@@ -9,7 +9,9 @@ from game.resources.camera import Camera
 def render_system(world: World, surface: pygame.Surface):
     camera = world.get_resource(Camera)
 
-    for entity, (shape,) in world.query(Shape):
+    # Stable sort: shapes on the same layer keep their creation order.
+    shapes = sorted(world.query(Shape), key=lambda item: item[1][0].layer)
+    for entity, (shape,) in shapes:
         transform = world.get_component(entity, Transform)
 
         radius = shape.radius * transform.max_scale

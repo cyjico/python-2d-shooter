@@ -6,7 +6,7 @@ from game.components.ui import UIButton, UILabel, UIPanel, UIRect
 from game.components.wallet import Wallet
 from game.constants.gun_buffs import describe_buff
 from game.constants.mystery_box import stepped_price
-from game.constants.rarity import RARITIES, rarity_color
+from game.constants.rarity import rarity_color, rarity_stars
 from game.core_ecs.world import World
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
@@ -16,7 +16,12 @@ INPUT_OWNER = "mystery_box"
 
 MENU_LAYER = 10
 PANEL_SIZE = (380, 220)
+PANEL_TOP = 44
+"""Gap between the top of the screen and the panel, px. Clears the buff list."""
 PANEL_COLOR = (35, 35, 45)
+PANEL_ALPHA = 170
+"""See-through, so the menu doesn't hide what's happening behind it."""
+BUTTON_ALPHA = 210
 TITLE_COLOR = (230, 180, 50)
 MUTED_COLOR = (150, 150, 150)
 DISABLED_COLOR = (110, 110, 130)
@@ -53,9 +58,7 @@ def show_menu(
         case BoxPhase.ROLLING:
             _rolling_menu(world, session)
         case BoxPhase.OFFER:
-            _offer_menu(world, session, wallet)
-        case BoxPhase.CHOOSE_SLOT:
-            _slot_menu(world, session, loadout)
+            _offer_menu(world, session, loadout, wallet)
 
     if session.is_open:
         world.get_resource(UIState).block_gameplay_input(INPUT_OWNER)
@@ -71,7 +74,9 @@ def _rolling_menu(world: World, session: MysteryBoxSession):
     _label(world, f"Paid ${session.last_paid}", 40, 20, MUTED_COLOR)
 
 
-def _offer_menu(world: World, session: MysteryBoxSession, wallet: Wallet):
+def _offer_menu(
+    world: World, session: MysteryBoxSession, loadout: Loadout, wallet: Wallet
+):
     gun = session.offer
     assert gun is not None and gun.rarity is not None
     spec = gun.spec
@@ -79,41 +84,27 @@ def _offer_menu(world: World, session: MysteryBoxSession, wallet: Wallet):
 
     _panel(world)
     _label(world, "Mystery Box", -85, 24, TITLE_COLOR)
-    _label(world, spec.name, -50, 32, RARITIES[gun.rarity].color)
-    _label(world, describe_buff(spec.id, gun.rarity), -18, 22)
-    _label(world, _stats(gun), 10, 18, MUTED_COLOR)
+    _label(
+        world, spec.name, -52, 32, rarity_color(gun.rarity), rarity_stars(gun.rarity)
+    )
+    _label(world, describe_buff(spec.id, gun.rarity), -22, 22)
+    _label(world, _stats(gun), 2, 18, MUTED_COLOR)
 
-    _button(world, "Take [E]", "box_take", (-120, 65), BUTTON_SIZE)
+    # Taking with full slots swaps out the gun in hand, so say which one.
+    held = loadout.equipped
+    if len(loadout.slots) >= loadout.max_slots and held is not None:
+        _label(world, f"Replaces your {held.spec.name}", 26, 18, MUTED_COLOR)
+
+    _button(world, "Take [E]", "box_take", (-120, 70), BUTTON_SIZE)
     _button(
         world,
         f"Reroll ${reroll_cost} [R]",
         "box_reroll",
-        (0, 65),
+        (0, 70),
         BUTTON_SIZE,
         enabled=wallet.can_afford(reroll_cost),
     )
-    _button(world, "Leave [Esc]", "box_leave", (120, 65), BUTTON_SIZE)
-
-
-def _slot_menu(world: World, session: MysteryBoxSession, loadout: Loadout):
-    assert session.offer is not None
-
-    _panel(world)
-    _label(world, "Replace which slot?", -85, 24, TITLE_COLOR)
-    _label(world, session.offer.spec.name, -55, 26, rarity_color(session.offer.rarity))
-
-    for i, gun in enumerate(loadout.slots):
-        slot_name = "Primary" if i == 0 else "Secondary"
-        _button(
-            world,
-            f"{i + 1}: {slot_name} - {gun.spec.name}",
-            f"box_slot_{i}",
-            (0, -15 + i * 42),
-            (320, 36),
-            color=rarity_color(gun.rarity),
-        )
-
-    _button(world, "Back [Esc]", "box_back", (0, 82), (120, 30))
+    _button(world, "Leave [Q]", "box_leave", (120, 70), BUTTON_SIZE)
 
 
 def _stats(gun: Gun):
@@ -133,12 +124,14 @@ def _element(
     size: tuple[int, int],
     layer: int = MENU_LAYER + 1,
 ):
-    """A menu element positioned relative to the screen's center."""
+    """A menu element positioned relative to the panel's center, which sits
+    near the top of the screen."""
+    panel_center_y = PANEL_TOP + PANEL_SIZE[1] / 2
     return world.create_entity(
         UIRect(
-            anchor=(0.5, 0.5),
+            anchor=(0.5, 0.0),
             pivot=(0.5, 0.5),
-            offset=offset,
+            offset=(offset[0], panel_center_y + offset[1]),
             size=size,
             layer=layer,
         ),
@@ -149,13 +142,20 @@ def _element(
 
 def _panel(world: World):
     _element(
-        world, UIPanel(PANEL_COLOR), offset=(0, 0), size=PANEL_SIZE, layer=MENU_LAYER
+        world,
+        UIPanel(PANEL_COLOR, PANEL_ALPHA),
+        offset=(0, 0),
+        size=PANEL_SIZE,
+        layer=MENU_LAYER,
     )
 
 
-def _label(world: World, text: str, y: float, size=20, color=WHITE):
+def _label(world: World, text: str, y: float, size=20, color=WHITE, stars=0):
     return _element(
-        world, UILabel(text, size, color), offset=(0, y), size=(PANEL_SIZE[0], 30)
+        world,
+        UILabel(text, size, color, stars),
+        offset=(0, y),
+        size=(PANEL_SIZE[0], 30),
     )
 
 
@@ -170,7 +170,7 @@ def _button(
 ):
     return _element(
         world,
-        UIButton(action, enabled=enabled),
+        UIButton(action, enabled=enabled, alpha=BUTTON_ALPHA),
         UILabel(text, 18, color if enabled else DISABLED_COLOR),
         offset=offset,
         size=size,

@@ -11,7 +11,12 @@ from game.components.ui import (
 )
 from game.core_ecs.world import World
 from game.resources.asset_store import AssetStore
-from game.util.draw import draw_bar
+from game.util.draw import draw_bar, draw_stars, fill_rect
+
+STAR_SCALE = 0.32
+"""Star radius relative to the label's font size."""
+STAR_TEXT_GAP = 6
+"""Space between a label's text and its stars, px."""
 
 
 def _draw_gauge(surface: pygame.Surface, rect: pygame.Rect, gauge: UIGauge):
@@ -41,9 +46,9 @@ def ui_render_system(world: World, surface: pygame.Surface):
                 ButtonState.HOVERED: button.hovered_color,
                 ButtonState.PRESSED: button.pressed_color,
             }[button.state]
-            pygame.draw.rect(surface, color, rect, border_radius=4)
+            fill_rect(surface, color, rect, button.alpha, border_radius=4)
         elif panel is not None:
-            pygame.draw.rect(surface, panel.color, rect, border_radius=4)
+            fill_rect(surface, panel.color, rect, panel.alpha, border_radius=4)
 
         gauge = world.try_get_component(entity, UIGauge)
         if gauge is not None:
@@ -55,5 +60,30 @@ def ui_render_system(world: World, surface: pygame.Surface):
 
         label = world.try_get_component(entity, UILabel)
         if label is not None:
-            text = assets.text(label.text, label.size, label.color)
-            surface.blit(text, text.get_rect(center=rect.center))
+            _draw_label(surface, assets, rect, label)
+
+
+def _draw_label(
+    surface: pygame.Surface, assets: AssetStore, rect: pygame.Rect, label: UILabel
+):
+    """Text centered in `rect`, followed by the label's stars if it has any."""
+    text = assets.text(label.text, label.size, label.color)
+    if label.stars <= 0:
+        surface.blit(text, text.get_rect(center=rect.center))
+        return
+
+    radius = max(3.0, label.size * STAR_SCALE)
+    stars_width = label.stars * (2 * radius + 2) - 2
+    gap = STAR_TEXT_GAP if label.text else 0
+    total = text.get_width() + gap + stars_width
+
+    left = rect.centerx - total / 2
+    surface.blit(text, text.get_rect(midleft=(round(left), rect.centery)))
+    draw_stars(
+        surface,
+        label.color,
+        left + text.get_width() + gap,
+        rect.centery,
+        label.stars,
+        radius,
+    )
