@@ -1,14 +1,16 @@
 import pygame
 
-from game.components.buffs import ActiveBuffs
 from game.components.health import Health
 from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.resources.camera import Camera
+from game.util.buffs import bonus_health
+from game.util.draw import draw_bar
 
 MIN_WIDTH = 24
-HEIGHT = 5
+HEIGHT = 7
+"""Includes the border."""
 GAP = 8
 """Space between the top of the entity and the bar, px."""
 
@@ -38,36 +40,27 @@ def health_bar_render_system(world: World, surface: pygame.Surface):
             continue
 
         # Bounding radius, so the bar doesn't bob as the shape rotates.
-        radius = shape.radius * max(map(abs, transform.scale))
+        radius = shape.radius * transform.max_scale
         if not camera.is_circle_visible(transform.position, radius + GAP + HEIGHT):
             continue
 
-        center = camera.world_to_screen(transform.position)
-        width = max(MIN_WIDTH, round(2 * radius))
-        bar = pygame.Rect(0, 0, width, HEIGHT)
-        bar.midbottom = (round(center.x), round(center.y - radius - GAP))
-
-        buffs = world.try_get_component(entity, ActiveBuffs)
-        bonus = 0.0 if buffs is None else sum(b.bonus_health for b in buffs.buffs)
-
         current = max(0.0, health.current)
-        # With bonus health the bar spans health + bonus, so the bonus stays
-        # visible even when regular health is full.
+        bonus = bonus_health(world, entity)
+        # The bar spans health + bonus, so bonus stays visible at full health.
         total = max(health.maximum, current + bonus)
 
-        pygame.draw.rect(surface, BACKGROUND_COLOR, bar)
+        center = camera.world_to_screen(transform.position)
+        bar = pygame.Rect(0, 0, max(MIN_WIDTH, round(2 * radius)), HEIGHT)
+        bar.midbottom = (round(center.x), round(center.y - radius - GAP))
 
-        fraction = min(1.0, current / health.maximum)
-        fill_width = round(width * current / total)
-        if fill_width > 0:
-            pygame.draw.rect(
-                surface, _fill_color(fraction), (bar.x, bar.y, fill_width, HEIGHT)
-            )
-
-        bonus_width = min(width - fill_width, round(width * bonus / total))
-        if bonus_width > 0:
-            pygame.draw.rect(
-                surface, BONUS_COLOR, (bar.x + fill_width, bar.y, bonus_width, HEIGHT)
-            )
-
-        pygame.draw.rect(surface, BORDER_COLOR, bar.inflate(2, 2), width=1)
+        draw_bar(
+            surface,
+            bar,
+            [
+                (current / total, _fill_color(min(1.0, current / health.maximum))),
+                (bonus / total, BONUS_COLOR),
+            ],
+            BACKGROUND_COLOR,
+            BORDER_COLOR,
+            border_width=1,
+        )

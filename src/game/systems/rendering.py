@@ -12,7 +12,7 @@ def render_system(world: World, surface: pygame.Surface):
     for entity, (shape,) in world.query(Shape):
         transform = world.get_component(entity, Transform)
 
-        radius = shape.radius * max(abs(transform.scale[0]), abs(transform.scale[1]))
+        radius = shape.radius * transform.max_scale
 
         if not camera.is_circle_visible(transform.position, radius):
             continue

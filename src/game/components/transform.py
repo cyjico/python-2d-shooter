@@ -14,6 +14,11 @@ class Transform:
     scale: tuple[float, float] = (1.0, 1.0)
     """Scale factors along the x and y axes."""
 
+    @property
+    def max_scale(self):
+        """Largest absolute scale factor. Use with `Shape.radius` for a world-space bounding radius."""
+        return max(abs(self.scale[0]), abs(self.scale[1]))
+
     def apply_all(self, vectors: Sequence[pygame.Vector2]):
         return [self.apply(v) for v in vectors]
 

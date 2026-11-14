@@ -56,13 +56,14 @@ from game.systems.collision import collision_system
 from game.systems.damage_numbers import (
     damage_number_render_system,
     damage_number_spawn_system,
-    damage_number_system,
 )
 from game.systems.dash import dash_impact_system, dash_system
+from game.systems.drift import drift_system
 from game.systems.health import death_cleanup_system, health_system
 from game.systems.health_bars import health_bar_render_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
+from game.systems.lifetime import lifetime_system
 from game.systems.mover import mover_system
 from game.systems.mystery_box import mystery_box_system
 from game.systems.physics import physics_system
@@ -235,11 +236,12 @@ class Game:
         dash_impact_system(self.world)
         charger_ai_collision_system(self.world)
 
-        projectile_system(self.world, dt)
+        projectile_system(self.world)
 
         health_system(self.world)
         damage_number_spawn_system(self.world)
-        damage_number_system(self.world, dt)
+        lifetime_system(self.world, dt)
+        drift_system(self.world, dt)
         bounty_system(self.world)
 
         breakable_system(self.world)

@@ -8,8 +8,6 @@ class Projectile:
     owner: Entity
     """Never hits this entity."""
     damage: float
-    lifetime: float
-    """Seconds left before despawning."""
     pierce_left: int = 0
     knockback: float = 0.0
     crit_chance: float = 0.0

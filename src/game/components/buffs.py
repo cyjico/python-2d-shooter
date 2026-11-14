@@ -39,10 +39,11 @@ class BuffSpec:
     """Extra health that absorbs damage first. Whatever is left is lost when the buff ends."""
 
     def __post_init__(self):
-        # Copy so later changes to the caller's dict can't alter this spec.
+        # Copy so later changes to the caller's dicts can't alter this spec.
         object.__setattr__(
             self, "multipliers", MappingProxyType(dict(self.multipliers))
         )
+        object.__setattr__(self, "bonuses", MappingProxyType(dict(self.bonuses)))
 
 
 @dataclass(slots=True)
@@ -61,24 +62,29 @@ class ActiveBuffs:
 
     buffs: list[ActiveBuff] = field(default_factory=list)
 
+    @property
+    def bonus_health(self):
+        """Total bonus health left across all active buffs."""
+        return sum(buff.bonus_health for buff in self.buffs)
+
     def add(self, spec: BuffSpec):
         """Starts `spec`, or restarts it if it is already active."""
         self.buffs = [b for b in self.buffs if b.spec.id != spec.id]
         self.buffs.append(ActiveBuff(spec, spec.duration, spec.bonus_health))
 
-    def multiplier(self, stat: Stat) -> float:
+    def multiplier(self, stat: Stat):
         result = 1.0
         for buff in self.buffs:
             result *= buff.spec.multipliers.get(stat, 1.0)
         return result
 
-    def bonus(self, stat: Stat) -> float:
+    def bonus(self, stat: Stat):
         return sum(buff.spec.bonuses.get(stat, 0.0) for buff in self.buffs)
 
-    def has(self, flag: Flag) -> bool:
+    def has(self, flag: Flag):
         return any(flag in buff.spec.flags for buff in self.buffs)
 
-    def absorb(self, amount: float) -> float:
+    def absorb(self, amount: float):
         """Spends bonus health on `amount` damage. Returns the damage left over."""
         for buff in self.buffs:
             taken = min(buff.bonus_health, amount)

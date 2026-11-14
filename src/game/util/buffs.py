@@ -24,6 +24,12 @@ def absorb_damage(world: World, entity: Entity, amount: float):
     return amount if buffs is None else buffs.absorb(amount)
 
 
+def bonus_health(world: World, entity: Entity):
+    """Bonus health the entity has left."""
+    buffs = world.try_get_component(entity, ActiveBuffs)
+    return 0.0 if buffs is None else buffs.bonus_health
+
+
 def grant_buff(world: World, entity: Entity, spec: BuffSpec):
     buffs = world.try_get_component(entity, ActiveBuffs)
     if buffs is None:
