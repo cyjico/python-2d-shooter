@@ -28,7 +28,7 @@ class Dash:
     Unlike `active`, this is still set when collisions are checked."""
 
     @property
-    def active(self) -> bool:
+    def active(self):
         return self.time_left > 0.0
 
 

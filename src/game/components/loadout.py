@@ -155,7 +155,7 @@ class Loadout:
         self.slots.insert(0, gun)
         self.active = 0
 
-    def replace(self, index: int, gun: Gun) -> Gun:
+    def replace(self, index: int, gun: Gun):
         """Swap the gun in `index` for `gun` and equip it. Returns the old gun."""
         self.slots[self.active].reload_remaining = 0.0
         replaced = self.slots[index]

@@ -82,7 +82,7 @@ MONEY_BOOSTS: dict[Rarity, BuffSpec] = {
 """One money buff per rarity tier."""
 
 
-def roll_buff(rng: random.Random | None = None) -> BuffSpec:
+def roll_buff(rng: random.Random | None = None):
     """Uniform over the fixed buffs and the money boost; money's tier is
     weighted by RARITIES."""
     rng = rng or random.Random()

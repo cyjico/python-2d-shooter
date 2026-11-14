@@ -30,7 +30,7 @@ class World:
         for pool in self._components.values():
             pool.pop(entity, None)
 
-    def is_alive(self, entity: Entity) -> bool:
+    def is_alive(self, entity: Entity):
         return entity in self._entities
 
     def add_component(self, entity: Entity, component):

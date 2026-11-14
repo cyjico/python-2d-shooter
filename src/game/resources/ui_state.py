@@ -14,7 +14,7 @@ class UIState:
     `block_gameplay_input` / `release_gameplay_input`."""
 
     @property
-    def blocks_gameplay_input(self) -> bool:
+    def blocks_gameplay_input(self):
         """True while any menu owns the keyboard and mouse. Gameplay systems
         (movement, weapons, dash, interaction) should do nothing while this is set."""
         return bool(self.input_blockers)

@@ -8,12 +8,12 @@ class EventBus:
     def __init__(self):
         self._events: dict[type, list[object]] = {}
 
-    def emit(self, event: object) -> None:
+    def emit(self, event: object):
         self._events.setdefault(type(event), []).append(event)
 
-    def read[E](self, event_type: type[E]) -> Sequence[E]:
+    def read[E](self, event_type: type[E]):
         """Events of this type emitted so far this frame."""
         return cast(Sequence[E], tuple(self._events.get(event_type, ())))
 
-    def clear(self) -> None:
+    def clear(self):
         self._events.clear()
