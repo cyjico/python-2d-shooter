@@ -12,18 +12,16 @@ def contact_damage_system(world: World, dt: float):
     events = world.get_resource(EventBus)
 
     for _, (contact,) in world.query(ContactDamage):
-        contact.cooldowns = {
-            e: left - dt for e, left in contact.cooldowns.items() if left - dt > 0
-        }
+        contact.tick(dt)
 
     for me, other in directed(events.read(CollisionEvent)):
         contact = world.try_get_component(me, ContactDamage)
-        if contact is None or other in contact.cooldowns:
+        if contact is None:
             continue
         if not world.has_component(other, contact.hits):
             continue
         if not world.has_component(other, Health):
             continue
 
-        contact.cooldowns[other] = contact.cooldown
-        events.emit(DamageEvent(other, contact.amount, me))
+        if contact.try_hit(other):
+            events.emit(DamageEvent(other, contact.amount, me))
