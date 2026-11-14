@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pygame
 
-from ..core_ecs.entity import Entity
+from game.core_ecs.entity import Entity
 
 
 @dataclass(slots=True)
