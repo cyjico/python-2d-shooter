@@ -15,7 +15,7 @@ from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-from game.events.collision import CollisionEvent
+from game.events.collision import CollisionEvent, directed
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
 from game.util.geometry import angle_of, rot_to_vec2
@@ -136,14 +136,10 @@ def charger_ai_collision_system(world: World):
     events = world.get_resource(EventBus)
 
     contacts: dict[Entity, list[Entity]] = {}
-    for collision in events.read(CollisionEvent):
-        for me, other in (
-            (collision.entity_a, collision.entity_b),
-            (collision.entity_b, collision.entity_a),
-        ):
-            charger = world.try_get_component(me, ChargerAI)
-            if charger is not None and charger.state is ChargerAIState.CHARGE:
-                contacts.setdefault(me, []).append(other)
+    for me, other in directed(events.read(CollisionEvent)):
+        charger = world.try_get_component(me, ChargerAI)
+        if charger is not None and charger.state is ChargerAIState.CHARGE:
+            contacts.setdefault(me, []).append(other)
 
     for me, others in contacts.items():
         _resolve_contacts(world, events, me, others)

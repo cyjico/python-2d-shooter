@@ -7,7 +7,7 @@ from game.components.rigid_body import RigidBody
 from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.core_ecs.world import World
-from game.events.collision import CollisionEvent
+from game.events.collision import CollisionEvent, directed
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
 from game.util.geometry import rot_to_vec2
@@ -66,16 +66,12 @@ def dash_impact_system(world: World):
     """A dash damages each Breakable it runs into, once. Run after collision_system."""
     events = world.get_resource(EventBus)
 
-    for collision in events.read(CollisionEvent):
-        for me, other in (
-            (collision.entity_a, collision.entity_b),
-            (collision.entity_b, collision.entity_a),
-        ):
-            dash = world.try_get_component(me, Dash)
-            if dash is None or not dash.moving or other in dash.hit:
-                continue
-            if not world.has_component(other, Breakable):
-                continue
+    for me, other in directed(events.read(CollisionEvent)):
+        dash = world.try_get_component(me, Dash)
+        if dash is None or not dash.moving or other in dash.hit:
+            continue
+        if not world.has_component(other, Breakable):
+            continue
 
-            dash.hit.add(other)
-            events.emit(DamageEvent(other, dash.impact_damage, me))
+        dash.hit.add(other)
+        events.emit(DamageEvent(other, dash.impact_damage, me))
