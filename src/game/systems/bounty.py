@@ -6,8 +6,7 @@ from game.util.money import earn_money
 
 
 def bounty_system(world: World):
-    """Pays killers the bounty of what they killed. Run after health_system,
-    before death_cleanup_system."""
+    """Pays killers the bounty of what they killed."""
     for death in world.get_resource(EventBus).read(EntityDiedEvent):
         if death.killer is None:
             continue

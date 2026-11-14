@@ -24,7 +24,7 @@ def breakable_system(world: World):
 
 
 def break_cleanup_system(world: World):
-    """Destroys what broke. Run last, so drop systems can still read its components."""
+    """Destroys what broke."""
     for broken in world.get_resource(EventBus).read(BrokenEvent):
         if world.is_alive(broken.entity):
             world.destroy_entity(broken.entity)

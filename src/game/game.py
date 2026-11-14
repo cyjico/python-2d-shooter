@@ -210,58 +210,91 @@ class Game:
     def update(self, dt: float):
         self.world.get_resource(EventBus).clear()
 
+        self._input_phase()
+        self._upkeep_phase(dt)
+        self._intent_phase(dt)
+        self._action_phase(dt)
+        self._physics_phase(dt)
+        self._hit_phase(dt)
+        self._damage_phase()
+        self._cleanup_phase(dt)
+        self._hud_phase()
+
+    def _input_phase(self):
+        """Raw input, then UI layout and hit-testing."""
         input_system(self.world, self.events)
-        buff_tick_system(self.world, dt)
-        stamina_system(self.world, dt)
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
 
-        mystery_box_system(self.world, dt)
+    def _upkeep_phase(self, dt: float):
+        """Timers and spawning."""
+        buff_tick_system(self.world, dt)
+        # Reads buffs, so after the tick.
+        stamina_system(self.world, dt)
         spawner_system(self.world, dt)
 
+    def _intent_phase(self, dt: float):
+        """Players and AI decide what they want to do this frame."""
+        # Aiming converts the mouse through the camera.
         camera_follow_system(self.world, dt)
+
+        # Before the player's intents: opening the menu blocks gameplay input
+        # on this same frame.
+        mystery_box_system(self.world, dt)
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
         player_dash_input_system(self.world)
 
+        # The charger swaps the hover behavior in and out, so it goes before
+        # the generic movement AIs.
         charger_ai_system(self.world, dt)
-
-        # Generic AI Movement
         follow_target_ai_system(self.world, dt)
         hover_around_target_ai_system(self.world, dt)
         random_dash_ai_system(self.world, dt)
 
+    def _action_phase(self, dt: float):
+        """Intents become velocity changes and shots."""
         mover_system(self.world, dt)
+        # An active dash overrides mover_system.
         dash_system(self.world, dt)
-
         weapon_system(self.world, dt)
 
+    def _physics_phase(self, dt: float):
         physics_system(self.world, dt)
         collision_system(self.world)
+        # Effects that skip physics.
+        drift_system(self.world, dt)
 
+    def _hit_phase(self, dt: float):
+        """Collision results become DamageEvents."""
         dash_impact_system(self.world)
         charger_ai_collision_system(self.world)
         contact_damage_system(self.world, dt)
-
         projectile_system(self.world)
 
+    def _damage_phase(self):
+        """Applies damage and reacts to it. The dead and broken still exist here
+        so reward systems can read their components."""
         health_system(self.world)
         damage_number_spawn_system(self.world)
-        lifetime_system(self.world, dt)
-        drift_system(self.world, dt)
         bounty_system(self.world)
-
         breakable_system(self.world)
+        # Reads the BrokenEvents just emitted.
         buff_drop_system(self.world)
+
+    def _cleanup_phase(self, dt: float):
+        """Entities leave the world here, after everything above has read them."""
         break_cleanup_system(self.world)
         death_cleanup_system(self.world)
+        lifetime_system(self.world, dt)
 
+    def _hud_phase(self):
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
         stamina_hud_system(self.world)
         buff_hud_system(self.world)
 
-        # UI created this frame (e.g. the mystery box menu) needs its rect before rendering.
+        # UI created this frame needs its rect before rendering on the next frame.
         ui_layout_system(self.world)
 
     def render(self):

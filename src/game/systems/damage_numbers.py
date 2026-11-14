@@ -57,8 +57,7 @@ def _style(world: World, taken: DamageTakenEvent):
 
 
 def damage_number_spawn_system(world: World):
-    """Spawns a DamageNumber per DamageTakenEvent. Run after health_system and
-    before death_cleanup_system, so the damaged entity still exists."""
+    """Spawns a DamageNumber per DamageTakenEvent."""
     events = world.get_resource(EventBus)
 
     for taken in events.read(DamageTakenEvent):

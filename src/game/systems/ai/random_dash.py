@@ -10,7 +10,7 @@ from game.util.rng import resolve_rng
 
 
 def random_dash_ai_system(world: World, dt: float, rng: random.Random | None = None):
-    """Requests dashes for RandomDashAI. Run after the movement AIs, before dash_system."""
+    """Requests dashes for RandomDashAI."""
     rng = resolve_rng(rng)
 
     for ent, (dasher,) in world.query(RandomDashAI):

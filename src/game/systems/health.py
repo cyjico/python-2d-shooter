@@ -8,7 +8,7 @@ from game.util.buffs import absorb_damage, has_flag
 
 
 def health_system(world: World):
-    """Run after anything that emits DamageEvent."""
+    """Applies DamageEvents to Health, emitting DamageTakenEvent and EntityDiedEvent."""
     events = world.get_resource(EventBus)
 
     for damage in events.read(DamageEvent):
@@ -34,7 +34,7 @@ def health_system(world: World):
 
 
 def death_cleanup_system(world: World):
-    """Destroys what died. Run last, so reward systems can still read its components."""
+    """Destroys what died."""
     for died in world.get_resource(EventBus).read(EntityDiedEvent):
         # TODO: player death should be game-over.
         if world.is_alive(died.entity) and not world.has_component(died.entity, Player):

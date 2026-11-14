@@ -29,8 +29,7 @@ def _dash_direction(
 
 
 def dash_system(world: World, dt: float):
-    """Starts and drives dashes for anything with Dash + DashIntent. Run after
-    mover_system and stamina_system."""
+    """Starts and drives dashes for anything with Dash + DashIntent."""
     for entity, (dash, intent, rigidbody, transform) in world.query(
         Dash, DashIntent, RigidBody, Transform
     ):
@@ -63,7 +62,7 @@ def dash_system(world: World, dt: float):
 
 
 def dash_impact_system(world: World):
-    """A dash damages each Breakable it runs into, once. Run after collision_system."""
+    """A dash damages each Breakable it runs into, once."""
     events = world.get_resource(EventBus)
 
     for me, other in directed(events.read(CollisionEvent)):

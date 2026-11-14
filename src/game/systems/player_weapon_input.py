@@ -6,7 +6,7 @@ from game.resources.ui_state import UIState
 
 
 def player_weapon_input_system(world: World):
-    """Turns raw input into the player's WeaponIntent. Run after ui_interaction."""
+    """Turns raw input into the player's WeaponIntent."""
 
     inputs = world.get_resource(InputState)
     ui_state = world.get_resource(UIState)

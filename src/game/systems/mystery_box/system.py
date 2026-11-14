@@ -1,8 +1,6 @@
 import random
 from dataclasses import dataclass
 
-import pygame
-
 from game.components.loadout import Loadout
 from game.components.mystery_box import MysteryBox
 from game.components.player import Player
@@ -47,7 +45,7 @@ class _Frame:
 
 
 def mystery_box_system(world: World, dt: float, rng: random.Random | None = None):
-    """Buying, rolling, taking and rerolling guns. Run after ui_interaction_system."""
+    """Buying, rolling, taking and rerolling guns."""
     player = next(iter(world.query(Player, Transform, Loadout, Wallet)), None)
     if player is None:
         return

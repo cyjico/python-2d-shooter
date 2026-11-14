@@ -8,8 +8,7 @@ from game.util.factions import is_hostile
 
 
 def contact_damage_system(world: World, dt: float):
-    """Emits a DamageEvent when a ContactDamage touches a valid victim. Run after
-    collision_system, before health_system."""
+    """Emits a DamageEvent when a ContactDamage touches a hostile entity."""
     events = world.get_resource(EventBus)
 
     for _, (contact,) in world.query(ContactDamage):

@@ -14,7 +14,7 @@ from game.resources.event_bus import EventBus
 
 
 def projectile_system(world: World):
-    """Emits a DamageEvent. Run after collision_system."""
+    """Emits a DamageEvent for each target a projectile hits."""
     events = world.get_resource(EventBus)
 
     for collision in events.read(CollisionEvent):

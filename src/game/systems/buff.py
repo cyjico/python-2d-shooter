@@ -15,7 +15,7 @@ def buff_tick_system(world: World, dt: float):
 
 
 def buff_drop_system(world: World, rng: random.Random | None = None):
-    """Gives the breaker a random buff. Run after breakable_system, before break_cleanup_system."""
+    """Gives the breaker a random buff."""
     for broken in world.get_resource(EventBus).read(BrokenEvent):
         if world.has_component(broken.entity, BuffDrop):
             grant_buff(world, broken.breaker, roll_buff(rng))
