@@ -35,14 +35,19 @@ CHASER_COLOR = (220, 70, 70)
 def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
     vertices = regular_polygon(5, CHARGER_RADIUS)
 
-    charger_ai = ChargerAI(charge_distance_sqr=800**2)
+    charger_ai = ChargerAI(
+        charge_speed=1750,
+        charge_acceleration=50_000,
+        charge_distance_sqr=800**2,
+        contact_damage=35,
+    )
 
     return world.create_entity(
         AI(target=player),
         Faction(Team.ENEMY),
         charger_ai,
         HoverAroundTargetAI(),
-        Mover(move_speed=150),
+        Mover(move_speed=180),
         Health(maximum=60),
         Bounty(CHARGER_BOUNTY),
         box_body(0.4, CHARGER_RADIUS, CHARGER_RADIUS, drag=0.4, angular_drag=0.4),
@@ -60,7 +65,7 @@ def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
         Faction(Team.ENEMY),
         FollowTargetAI(),
         RandomDashAI(),
-        Mover(move_speed=160),
+        Mover(move_speed=210),
         Dash(speed=650, cooldown=0.5),
         DashIntent(),
         ContactDamage(amount=10),

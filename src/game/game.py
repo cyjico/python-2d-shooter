@@ -41,6 +41,7 @@ from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
+from game.resources.enemy_director import EnemyDirector
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import MysteryBoxSession
@@ -62,6 +63,7 @@ from game.systems.damage_numbers import (
 )
 from game.systems.dash import dash_impact_system, dash_system
 from game.systems.drift import drift_system
+from game.systems.enemy_spawn import enemy_spawn_system
 from game.systems.health import death_cleanup_system, health_system
 from game.systems.health_bars import health_bar_render_system
 from game.systems.input import input_system
@@ -69,6 +71,7 @@ from game.systems.inventory_hud import inventory_hud_system
 from game.systems.lifetime import lifetime_system
 from game.systems.mover import mover_system
 from game.systems.mystery_box import mystery_box_system
+from game.systems.offscreen_despawn import offscreen_despawn_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
 from game.systems.player_dash_input import player_dash_input_system
@@ -233,6 +236,7 @@ class Game:
         # Reads buffs, so after the tick.
         stamina_system(self.world, dt)
         spawner_system(self.world, dt)
+        enemy_spawn_system(self.world, dt)
 
     def _intent_phase(self, dt: float):
         """Players and AI decide what they want to do this frame."""
@@ -289,6 +293,7 @@ class Game:
         break_cleanup_system(self.world)
         death_cleanup_system(self.world)
         lifetime_system(self.world, dt)
+        offscreen_despawn_system(self.world, dt)
 
     def _hud_phase(self):
         weapon_status_hud_system(self.world)
@@ -347,6 +352,9 @@ class Game:
             self.mystery_box,
             Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
         )
+
+        # Survival spawning: enemies appear just off screen, ramping up over time.
+        self.world.add_resource(EnemyDirector())
 
 
 def main():

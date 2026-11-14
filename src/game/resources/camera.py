@@ -1,4 +1,8 @@
+import random
+
 import pygame
+
+from game.util.rng import resolve_rng
 
 
 class Camera:
@@ -26,3 +30,27 @@ class Camera:
             and sy + radius >= 0
             and sy - radius <= h
         )
+
+    def random_point_outside_view(
+        self,
+        margin_min: float,
+        margin_max: float,
+        rng: random.Random | None = None,
+    ):
+        """Random world point in the rectangular ring around the viewport,
+        between `margin_min` and `margin_max` px outside each edge."""
+        if not 0 <= margin_min < margin_max:
+            raise ValueError("need 0 <= margin_min < margin_max")
+
+        rng = resolve_rng(rng)
+        w, h = self.viewport_size
+
+        # Sample the outer rectangle and retry while inside the inner one.
+        # At least half of the outer area is ring, so this ends quickly.
+        while True:
+            x = rng.uniform(-margin_max, w + margin_max)
+            y = rng.uniform(-margin_max, h + margin_max)
+            if not (
+                -margin_min < x < w + margin_min and -margin_min < y < h + margin_min
+            ):
+                return self.screen_to_world(pygame.Vector2(x, y))
