@@ -41,6 +41,7 @@ from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
+from game.resources.enemy_director import EnemyDirector
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import MysteryBoxSession
@@ -62,6 +63,7 @@ from game.systems.damage_numbers import (
 )
 from game.systems.dash import dash_impact_system, dash_system
 from game.systems.drift import drift_system
+from game.systems.enemy_spawn import enemy_spawn_system
 from game.systems.health import death_cleanup_system, health_system
 from game.systems.health_bars import health_bar_render_system
 from game.systems.input import input_system
@@ -233,6 +235,7 @@ class Game:
         # Reads buffs, so after the tick.
         stamina_system(self.world, dt)
         spawner_system(self.world, dt)
+        enemy_spawn_system(self.world, dt)
 
     def _intent_phase(self, dt: float):
         """Players and AI decide what they want to do this frame."""
@@ -347,6 +350,9 @@ class Game:
             self.mystery_box,
             Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
         )
+
+        # Survival spawning: enemies appear just off screen, ramping up over time.
+        self.world.add_resource(EnemyDirector())
 
 
 def main():
