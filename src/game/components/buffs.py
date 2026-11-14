@@ -10,6 +10,9 @@ class Stat(Enum):
     MOVE_SPEED = auto()
     DAMAGE = auto()
     MONEY = auto()
+    STAMINA_SEGMENTS = auto()
+    """Used with `bonuses`: extra stamina bars."""
+    STAMINA_REGEN = auto()
 
 
 class Flag(Enum):
@@ -28,6 +31,9 @@ class BuffSpec:
     duration: float
     """Seconds."""
     multipliers: Mapping[Stat, float] = field(default_factory=dict)
+    """Scale a stat. Stacks by multiplying."""
+    bonuses: Mapping[Stat, float] = field(default_factory=dict)
+    """Flat amounts added to a stat. Stacks by adding."""
     flags: frozenset[Flag] = frozenset()
     bonus_health: float = 0.0
     """Extra health that absorbs damage first. Whatever is left is lost when the buff ends."""
@@ -65,6 +71,9 @@ class ActiveBuffs:
         for buff in self.buffs:
             result *= buff.spec.multipliers.get(stat, 1.0)
         return result
+
+    def bonus(self, stat: Stat) -> float:
+        return sum(buff.spec.bonuses.get(stat, 0.0) for buff in self.buffs)
 
     def has(self, flag: Flag) -> bool:
         return any(flag in buff.spec.flags for buff in self.buffs)

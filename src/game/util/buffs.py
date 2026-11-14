@@ -8,6 +8,11 @@ def stat_multiplier(world: World, entity: Entity, stat: Stat) -> float:
     return 1.0 if buffs is None else buffs.multiplier(stat)
 
 
+def stat_bonus(world: World, entity: Entity, stat: Stat) -> float:
+    buffs = world.try_get_component(entity, ActiveBuffs)
+    return 0.0 if buffs is None else buffs.bonus(stat)
+
+
 def has_flag(world: World, entity: Entity, flag: Flag) -> bool:
     buffs = world.try_get_component(entity, ActiveBuffs)
     return buffs is not None and buffs.has(flag)

@@ -32,8 +32,30 @@ OVERHEAL = BuffSpec(
     bonus_health=300.0,
 )
 
+EXTRA_STAMINA = BuffSpec(
+    id="extra_stamina",
+    name="Extra Stamina",
+    duration=15.0,
+    bonuses={Stat.STAMINA_SEGMENTS: 2},
+)
+
+QUICK_RECOVERY = BuffSpec(
+    id="quick_recovery",
+    name="Quick Recovery",
+    duration=15.0,
+    multipliers={Stat.STAMINA_REGEN: 2.0},
+)
+
 ALL_BUFFS: dict[str, BuffSpec] = {
-    b.id: b for b in (SPEED_BOOST, DAMAGE_BOOST, IMMUNITY, OVERHEAL)
+    b.id: b
+    for b in (
+        SPEED_BOOST,
+        DAMAGE_BOOST,
+        IMMUNITY,
+        OVERHEAL,
+        EXTRA_STAMINA,
+        QUICK_RECOVERY,
+    )
 }
 """Everything a BuffDrop can roll (no rarities)."""
 

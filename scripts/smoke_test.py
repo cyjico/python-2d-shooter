@@ -4,20 +4,23 @@ from dataclasses import replace
 import pygame
 
 from game.components.bounty import Bounty
+from game.components.buffs import ActiveBuffs, Stat
+from game.components.dash import Dash
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.relocatable import Relocatable
+from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.components.wallet import Wallet
-from game.constants.buffs import MONEY_BOOSTS
+from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
 from game.prefabs.enemies import spawn_charger
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
-from game.systems.health import death_cleanup_system, health_system
-from game.util.buffs import grant_buff
+from game.resources.ui_state import UIState
+from game.util.buffs import grant_buff, stat_bonus, stat_multiplier
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -59,6 +62,7 @@ session = world.get_resource(MysteryBoxSession)
 loadout = world.get_component(game.player, Loadout)
 wallet = world.get_component(game.player, Wallet)
 box = world.get_component(game.mystery_box, MysteryBox)
+ui_state = world.get_resource(UIState)
 
 # Every gun x rarity builds a valid, never-weaker spec.
 for base in ALL_GUNS.values():
@@ -77,6 +81,7 @@ assert wallet.balance == 800 and box.price == 200
 stand_next_to_box()
 press(pygame.K_e)
 assert session.phase is BoxPhase.ROLLING and wallet.balance == 600
+assert ui_state.blocks_gameplay_input
 wait_for_offer()
 
 # Reroll costs 200 more.
@@ -90,6 +95,7 @@ offered = session.offer
 old_box_pos = pygame.Vector2(world.get_component(game.mystery_box, Transform).position)
 press(pygame.K_e)
 assert session.phase is BoxPhase.CLOSED
+assert not ui_state.blocks_gameplay_input
 assert loadout.slots[0] is offered and loadout.active == 0
 assert loadout.slots[1].spec.id == "pistol" and loadout.slots[1].rarity is None
 assert box.price == 570, box.price  # (400 + 200) * 0.95
@@ -161,6 +167,47 @@ grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
 before = wallet.balance
 bounty = kill_charger()
 assert wallet.balance == before + round(bounty * 1.75), wallet.balance
+
+# Dashing spends stamina and stops when it runs out.
+stamina = world.get_component(game.player, Stamina)
+dash = world.get_component(game.player, Dash)
+stamina.current = 2.0
+press(pygame.K_SPACE)
+assert dash.active, "affordable dash should start"
+assert 0.9 < stamina.current < 1.2, stamina.current
+step(20)
+assert not dash.active, "dash should have ended"
+press(pygame.K_SPACE)
+assert dash.active, "second affordable dash should start"
+assert stamina.current < 0.5, stamina.current
+step(20)
+press(pygame.K_SPACE)
+assert not dash.active, "unaffordable dash should be refused"
+assert stamina.current < 1.0
+
+# Extra Stamina raises the regen cap above the base segments.
+stamina.current = 2.0
+grant_buff(world, game.player, EXTRA_STAMINA)
+step(60)  # ~1s of regen at 0.3/s
+assert stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 2
+assert stamina.current > 2.0, stamina.current
+
+# Expiry goes through ActiveBuffs.tick, then the cap clamps stamina back down.
+stamina.current = 4.0
+active = world.get_component(game.player, ActiveBuffs)
+for buff in active.buffs:
+    buff.time_left = 0.001
+step()
+assert not active.buffs, active.buffs
+assert stat_bonus(world, game.player, Stat.STAMINA_SEGMENTS) == 0
+assert stamina.current <= 2.0, stamina.current
+
+# Quick Recovery doubles the regen rate.
+grant_buff(world, game.player, QUICK_RECOVERY)
+stamina.current = 0.0
+step()
+assert stat_multiplier(world, game.player, Stat.STAMINA_REGEN) == 2.0
+assert abs(stamina.current - stamina.regen_rate * 2.0 / 60) < 1e-6, stamina.current
 
 step(60)
 

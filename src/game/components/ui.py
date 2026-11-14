@@ -51,3 +51,17 @@ class UIButton:
     normal_color: tuple[int, int, int] = (70, 70, 70)
     hovered_color: tuple[int, int, int] = (100, 100, 100)
     pressed_color: tuple[int, int, int] = (40, 40, 40)
+
+
+@dataclass(slots=True)
+class UIGauge:
+    """A fill bar with markers splitting it into equal segments."""
+
+    value: float = 1.0
+    """Fill level, 0..1."""
+    segments: int = 1
+    """Markers are drawn between segments, so 2 draws one marker at the middle."""
+    fill_color: tuple[int, int, int] = (90, 190, 255)
+    empty_color: tuple[int, int, int] = (25, 25, 32)
+    marker_color: tuple[int, int, int] = (200, 200, 220)
+    border_color: tuple[int, int, int] = (120, 120, 140)

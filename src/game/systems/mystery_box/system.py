@@ -22,6 +22,7 @@ from game.events.ui import ButtonClickedEvent
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
+from game.resources.ui_state import UIState
 from game.systems.mystery_box.menu import clear_menu, set_prompt, show_menu
 from game.systems.mystery_box.placement import nearest_box
 from game.util.spawn_points import relocate
@@ -43,6 +44,7 @@ class _Frame:
     transform: Transform
     loadout: Loadout
     wallet: Wallet
+    ui: UIState
 
 
 def mystery_box_system(world: World, dt: float, rng: random.Random | None = None):
@@ -64,6 +66,7 @@ def mystery_box_system(world: World, dt: float, rng: random.Random | None = None
         transform=transform,
         loadout=loadout,
         wallet=wallet,
+        ui=world.get_resource(UIState),
     )
 
     match f.session.phase:
@@ -81,6 +84,11 @@ def mystery_box_system(world: World, dt: float, rng: random.Random | None = None
 
 
 def _closed(f: _Frame):
+    # Another menu has the input, so the box can't be opened or prompted.
+    if f.ui.blocks_gameplay_input:
+        set_prompt(f.world, "")
+        return
+
     nearest = nearest_box(f.world, f.transform.position)
     if nearest is None:
         set_prompt(f.world, "")

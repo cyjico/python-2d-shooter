@@ -1,41 +1,49 @@
-import math
-
 import pygame
 
 from game.components.breakable import Breakable
-from game.components.dash import Dash
-from game.components.player import Player
+from game.components.dash import Dash, DashIntent
+from game.components.mover import Mover
 from game.components.rigid_body import RigidBody
+from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.events.collision import CollisionEvent
 from game.events.combat import DamageEvent
 from game.resources.event_bus import EventBus
-from game.resources.input_state import InputState
+from game.util.geometry import rot_to_vec2
+
+
+def _dash_direction(mover: Mover | None, transform: Transform):
+    """Where the mover is heading, else where it faces, else its rotation."""
+    if mover is not None:
+        if mover.move_dir.length_squared() > 0:
+            return mover.move_dir.normalize()
+        if mover.face_angle is not None:
+            return rot_to_vec2(mover.face_angle)
+    return rot_to_vec2(transform.rotation)
 
 
 def dash_system(world: World, dt: float):
-    inputs = world.get_resource(InputState)
-
-    for _, (_, dash, rigidbody, transform) in world.query(
-        Player, Dash, RigidBody, Transform
+    """Starts and drives dashes for anything with Dash + DashIntent. Run after
+    mover_system and stamina_system."""
+    for entity, (dash, intent, rigidbody, transform) in world.query(
+        Dash, DashIntent, RigidBody, Transform
     ):
         dash.cooldown_left = max(0.0, dash.cooldown_left - dt)
         dash.moving = False
 
-        if inputs.dash_pressed and not dash.active and dash.cooldown_left == 0.0:
-            if inputs.movement.length_squared() > 0:
-                direction = inputs.movement.copy()
-            else:
-                # No movement keys held: dash the way the player is facing.
-                direction = pygame.Vector2(
-                    math.cos(transform.rotation), math.sin(transform.rotation)
-                )
+        wants_dash = intent.requested
+        intent.requested = False
 
-            dash.direction = direction
-            dash.time_left = dash.duration
-            dash.cooldown_left = dash.cooldown
-            dash.hit.clear()
+        if wants_dash and not dash.active and dash.cooldown_left == 0.0:
+            stamina = world.try_get_component(entity, Stamina)
+            if stamina is None or stamina.try_spend(dash.stamina_cost):
+                dash.direction = _dash_direction(
+                    world.try_get_component(entity, Mover), transform
+                )
+                dash.time_left = dash.duration
+                dash.cooldown_left = dash.cooldown
+                dash.hit.clear()
 
         if dash.active:
             dash.moving = True

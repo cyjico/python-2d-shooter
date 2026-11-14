@@ -1,8 +1,33 @@
 import pygame
 
-from game.components.ui import ButtonState, UIButton, UIImage, UILabel, UIPanel, UIRect
+from game.components.ui import (
+    ButtonState,
+    UIButton,
+    UIGauge,
+    UIImage,
+    UILabel,
+    UIPanel,
+    UIRect,
+)
 from game.core_ecs.world import World
 from game.resources.asset_store import AssetStore
+
+
+def _draw_gauge(surface: pygame.Surface, rect: pygame.Rect, gauge: UIGauge):
+    pygame.draw.rect(surface, gauge.empty_color, rect, border_radius=4)
+
+    fill_width = round(rect.width * max(0.0, min(1.0, gauge.value)))
+    if fill_width > 0:
+        fill = pygame.Rect(rect.left, rect.top, fill_width, rect.height)
+        pygame.draw.rect(surface, gauge.fill_color, fill, border_radius=4)
+
+    for i in range(1, gauge.segments):
+        x = rect.left + round(rect.width * i / gauge.segments)
+        pygame.draw.line(
+            surface, gauge.marker_color, (x, rect.top), (x, rect.bottom - 1), 2
+        )
+
+    pygame.draw.rect(surface, gauge.border_color, rect, width=2, border_radius=4)
 
 
 def ui_render_system(world: World, surface: pygame.Surface):
@@ -22,6 +47,10 @@ def ui_render_system(world: World, surface: pygame.Surface):
             pygame.draw.rect(surface, color, rect, border_radius=4)
         elif panel is not None:
             pygame.draw.rect(surface, panel.color, rect, border_radius=4)
+
+        gauge = world.try_get_component(entity, UIGauge)
+        if gauge is not None:
+            _draw_gauge(surface, rect, gauge)
 
         image = world.try_get_component(entity, UIImage)
         if image is not None:
