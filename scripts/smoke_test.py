@@ -12,6 +12,7 @@ from game.components.health import Health
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.relocatable import Relocatable
+from game.components.split_on_death import SplitOnDeath
 from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.components.wallet import Wallet
@@ -19,7 +20,7 @@ from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
-from game.prefabs.enemies import spawn_charger, spawn_chaser
+from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
@@ -229,6 +230,42 @@ world.get_component(chaser, Transform).position = pygame.Vector2(
 step()
 assert health.current < before, "chaser contact should hurt"
 world.destroy_entity(chaser)
+
+# Splitter: 4 mediums at 25% health, each leaving 2 smalls at 50% of that.
+slow_pistol = replace(ALL_GUNS["pistol"], projectile_speed=1.0)
+
+
+def enemies():
+    return {e for e, _ in world.query(Health) if e != game.player}
+
+
+def kill(entity):
+    pos = pygame.Vector2(world.get_component(entity, Transform).position)
+    spawn_gun_projectile(world, game.player, pos, 0.0, slow_pistol, damage_scale=1e9)
+    step()
+    assert not world.is_alive(entity)
+
+
+known = enemies()
+large = spawn_splitter(world, KILL_SPOT, game.player)
+large_hp = world.get_component(large, Health).maximum
+kill(large)
+
+mediums = enemies() - known
+assert len(mediums) == 4, mediums
+for e in mediums:
+    assert world.get_component(e, Health).maximum == large_hp * 0.25
+    assert world.has_component(e, SplitOnDeath)
+
+kill(next(iter(mediums)))
+smalls = enemies() - known - mediums
+assert len(smalls) == 2, smalls
+for e in smalls:
+    assert world.get_component(e, Health).maximum == large_hp * 0.25 * 0.5
+    assert not world.has_component(e, SplitOnDeath)
+
+for e in enemies() - known:
+    world.destroy_entity(e)
 
 step(60)
 
