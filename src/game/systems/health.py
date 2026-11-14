@@ -21,7 +21,7 @@ def health_system(world: World):
 
         events.emit(DamageTakenEvent(damage.target, damage.amount, damage.critical))
 
-        # Bonus health soaks first; only the overflow reaches real health.
+        # Shield soaks first; only the overflow reaches real health.
         amount = absorb_damage(world, damage.target, damage.amount)
         if amount <= 0:
             continue

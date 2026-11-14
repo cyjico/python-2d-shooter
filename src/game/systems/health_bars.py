@@ -5,7 +5,7 @@ from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.resources.camera import Camera
-from game.util.buffs import bonus_health
+from game.util.buffs import shield
 from game.util.draw import draw_bar
 
 MIN_WIDTH = 24
@@ -19,8 +19,8 @@ BORDER_COLOR = (0, 0, 0)
 HIGH_COLOR = (90, 220, 90)
 MID_COLOR = (240, 200, 60)
 LOW_COLOR = (230, 70, 60)
-BONUS_COLOR = (90, 200, 255)
-"""Bonus health from buffs, drawn after the regular health."""
+SHIELD_COLOR = (90, 200, 255)
+"""Shield from buffs, drawn after the regular health."""
 
 
 def _fill_color(fraction: float):
@@ -45,8 +45,8 @@ def health_bar_render_system(world: World, surface: pygame.Surface):
             continue
 
         current = max(0.0, health.current)
-        bonus = bonus_health(world, entity)
-        # The bar spans health + bonus, so bonus stays visible at full health.
+        bonus = shield(world, entity)
+        # The bar spans health + shield, so shield stays visible at full health.
         total = max(health.maximum, current + bonus)
 
         center = camera.world_to_screen(transform.position)
@@ -58,7 +58,7 @@ def health_bar_render_system(world: World, surface: pygame.Surface):
             bar,
             [
                 (current / total, _fill_color(min(1.0, current / health.maximum))),
-                (bonus / total, BONUS_COLOR),
+                (bonus / total, SHIELD_COLOR),
             ],
             BACKGROUND_COLOR,
             BORDER_COLOR,

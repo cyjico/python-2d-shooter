@@ -35,7 +35,7 @@ class BuffSpec:
     bonuses: Mapping[Stat, float] = field(default_factory=dict)
     """Flat amounts added to a stat. Stacks by adding."""
     flags: frozenset[Flag] = frozenset()
-    bonus_health: float = 0.0
+    shield: float = 0.0
     """Extra health that absorbs damage first. Whatever is left is lost when the buff ends."""
 
     def __post_init__(self):
@@ -52,8 +52,8 @@ class ActiveBuff:
 
     spec: BuffSpec
     time_left: float
-    bonus_health: float
-    """What is left of `spec.bonus_health`."""
+    shield: float
+    """What is left of `spec.shield`."""
 
 
 @dataclass(slots=True)
@@ -63,14 +63,14 @@ class ActiveBuffs:
     buffs: list[ActiveBuff] = field(default_factory=list)
 
     @property
-    def bonus_health(self):
-        """Total bonus health left across all active buffs."""
-        return sum(buff.bonus_health for buff in self.buffs)
+    def shield(self):
+        """Total shield left across all active buffs."""
+        return sum(buff.shield for buff in self.buffs)
 
     def add(self, spec: BuffSpec):
         """Starts `spec`, or restarts it if it is already active."""
         self.buffs = [b for b in self.buffs if b.spec.id != spec.id]
-        self.buffs.append(ActiveBuff(spec, spec.duration, spec.bonus_health))
+        self.buffs.append(ActiveBuff(spec, spec.duration, spec.shield))
 
     def multiplier(self, stat: Stat):
         result = 1.0
@@ -85,10 +85,10 @@ class ActiveBuffs:
         return any(flag in buff.spec.flags for buff in self.buffs)
 
     def absorb(self, amount: float):
-        """Spends bonus health on `amount` damage. Returns the damage left over."""
+        """Spends shield on `amount` damage. Returns the damage left over."""
         for buff in self.buffs:
-            taken = min(buff.bonus_health, amount)
-            buff.bonus_health -= taken
+            taken = min(buff.shield, amount)
+            buff.shield -= taken
             amount -= taken
         return amount
 
