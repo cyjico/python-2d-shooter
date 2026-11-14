@@ -15,6 +15,10 @@ from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
+    WaveBannerLabel,
+    WaveBannerSubLabel,
+    WaveLabel,
+    WaveRemainingLabel,
     WeaponStatusLabel,
 )
 from game.components.loadout import Gun, Loadout
@@ -54,6 +58,7 @@ from game.systems.ai.charger import charger_ai_collision_system, charger_ai_syst
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
 from game.systems.ai.random_dash import random_dash_ai_system
+from game.systems.ai.shooter import shooter_ai_system
 from game.systems.bounty import bounty_system
 from game.systems.breakable import break_cleanup_system, breakable_system
 from game.systems.buff import buff_drop_system, buff_tick_system
@@ -79,6 +84,7 @@ from game.systems.health import death_cleanup_system, health_system
 from game.systems.health_bars import health_bar_render_system
 from game.systems.input import input_system
 from game.systems.inventory_hud import inventory_hud_system
+from game.systems.last_enemy_cue import last_enemy_cue_render_system
 from game.systems.lifetime import lifetime_system
 from game.systems.mover import mover_system
 from game.systems.mystery_box import (
@@ -106,6 +112,8 @@ from game.systems.vfx import (
     spark_render_system,
     spark_spawn_system,
 )
+from game.systems.wave_hud import wave_hud_system
+from game.systems.wave_scaling import wave_scaling_system
 from game.systems.weapon import weapon_system
 from game.systems.weapon_status_hud import weapon_status_hud_system
 from game.util.factions import Faction
@@ -227,6 +235,28 @@ class Game:
             UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -16), size=(160, 36)),
             UILabel(""),
             WeaponStatusLabel(),
+        )
+        # Wave, stacked above the ammo.
+        self.world.create_entity(
+            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -54), size=(160, 22)),
+            UILabel("", 18),
+            WaveRemainingLabel(),
+        )
+        self.world.create_entity(
+            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -78), size=(160, 34)),
+            UILabel("", 30),
+            WaveLabel(),
+        )
+        # Next-wave banner (during breaks) and last-enemy callout.
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), size=(500, 64)),
+            UILabel("", 56),
+            WaveBannerLabel(),
+        )
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), offset=(0, 46), size=(500, 28)),
+            UILabel("", 24),
+            WaveBannerSubLabel(),
         )
 
         # Inventory slots, bottom left, stacked: 1 = primary on top.
@@ -358,6 +388,8 @@ class Game:
         stamina_system(self.world, dt)
         spawner_system(self.world, dt)
         enemy_spawn_system(self.world, dt)
+        # After spawning, so new enemies are scaled before they ever act.
+        wave_scaling_system(self.world)
 
     def _intent_phase(self, dt: float):
         """Players and AI decide what they want to do this frame."""
@@ -377,6 +409,8 @@ class Game:
         follow_target_ai_system(self.world, dt)
         hover_around_target_ai_system(self.world, dt)
         random_dash_ai_system(self.world, dt)
+        # Overrides the facing the movement AIs just set, to aim.
+        shooter_ai_system(self.world, dt)
 
     def _action_phase(self, dt: float):
         """Intents become velocity changes and shots."""
@@ -426,6 +460,7 @@ class Game:
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
         buff_hud_system(self.world)
+        wave_hud_system(self.world)
 
         # UI created this frame needs its rect before rendering on the next frame.
         ui_layout_system(self.world)
@@ -443,6 +478,7 @@ class Game:
             spark_render_system(self.world, self.screen)
             mystery_box_price_render_system(self.world, self.screen)
             health_bar_render_system(self.world, self.screen)
+            last_enemy_cue_render_system(self.world, self.screen)
             stamina_dots_render_system(self.world, self.screen)
             damage_number_render_system(self.world, self.screen)
 
@@ -492,7 +528,7 @@ class Game:
             Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
         )
 
-        # Survival spawning: enemies appear just off screen, ramping up over time.
+        # Waves: enemies appear just off screen, more and stronger every wave.
         self.world.add_resource(EnemyDirector())
 
 

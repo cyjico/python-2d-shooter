@@ -36,3 +36,23 @@ class BuffStatusLabel:
 @dataclass(slots=True)
 class ScreenUI:
     """Marks UI of a full-screen menu (main menu, game over)."""
+
+
+@dataclass(slots=True)
+class WaveLabel:
+    """Marks a UILabel that shows the wave number in roman numerals."""
+
+
+@dataclass(slots=True)
+class WaveRemainingLabel:
+    """Marks a UILabel that shows how many enemies are left in the wave."""
+
+
+@dataclass(slots=True)
+class WaveBannerLabel:
+    """Marks the big centered UILabel announcing the next wave during a break."""
+
+
+@dataclass(slots=True)
+class WaveBannerSubLabel:
+    """Marks the smaller UILabel under the wave banner (countdown, last enemy)."""

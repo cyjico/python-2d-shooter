@@ -5,6 +5,7 @@ from game.components.ui import UIButton, UILabel, UIPanel, UIRect
 from game.core_ecs.world import World
 from game.resources.camera import Camera
 from game.resources.run_stats import RunStats
+from game.util.roman import to_roman
 
 PLAY_ACTION = "play"
 """Action of the Play button on both screens. Starts a new run."""
@@ -14,7 +15,7 @@ PLAY_BUTTON_SIZE = (200, 56)
 
 OVERLAY_COLOR = (0, 0, 0)
 OVERLAY_ALPHA = 140
-PANEL_SIZE = (360, 320)
+PANEL_SIZE = (360, 360)
 PANEL_COLOR = (35, 35, 45)
 PANEL_ALPHA = 235
 TITLE_COLOR = (230, 70, 70)
@@ -80,10 +81,12 @@ def build_game_over(world: World, stats: RunStats, cash_gained: int):
             layer=SCREEN_LAYER + 2,
         )
 
-    line("You Died", -120, 44, TITLE_COLOR)
-    line(f"Enemies Killed: {stats.enemies_killed}", -70)
-    line(f"Mystery Boxes Opened: {stats.boxes_opened}", -38)
-    line(f"Time Survived: {format_time(stats.time_survived)}", -6)
-    line(f"Total Cash Gained: ${cash_gained}", 26)
+    line("You Died", -140, 44, TITLE_COLOR)
+    wave = to_roman(stats.wave) if stats.wave > 0 else "-"
+    line(f"Wave Reached: {wave}", -90)
+    line(f"Enemies Killed: {stats.enemies_killed}", -58)
+    line(f"Mystery Boxes Opened: {stats.boxes_opened}", -26)
+    line(f"Time Survived: {format_time(stats.time_survived)}", 6)
+    line(f"Total Cash Gained: ${cash_gained}", 38)
 
-    _play_button(world, 100)
+    _play_button(world, 115)

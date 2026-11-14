@@ -69,7 +69,7 @@ def _fire(
     gun.cooldown = 1.0 / spec.fire_rate
 
     origin = transform.apply(loadout.muzzle)
-    damage_scale = stat_multiplier(world, shooter, Stat.DAMAGE)
+    damage_scale = loadout.damage_scale * stat_multiplier(world, shooter, Stat.DAMAGE)
     for _ in range(spec.pellets):
         deviation = math.radians(random.uniform(-spec.spread, spec.spread))
         spawn_gun_projectile(
@@ -79,6 +79,7 @@ def _fire(
             transform.rotation + deviation,
             spec,
             damage_scale,
+            loadout.knockback_scale,
         )
 
     # Auto-reload when the magazine runs dry.

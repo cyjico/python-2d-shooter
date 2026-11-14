@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+from game.components.faction import Team
 from game.core_ecs.entity import Entity
 
 
@@ -8,6 +9,8 @@ class Projectile:
     owner: Entity
     """Never hits this entity."""
     damage: float
+    team: Team = Team.NONE
+    """The owner's team when fired. Passes through allies of that team."""
     pierce_left: int = 0
     knockback: float = 0.0
     crit_chance: float = 0.0

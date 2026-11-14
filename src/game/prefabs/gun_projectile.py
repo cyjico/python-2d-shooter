@@ -12,6 +12,7 @@ from game.components.transform import Transform
 from game.constants import layers
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from game.util.factions import team_of
 from game.util.geometry import rectangle
 
 
@@ -22,6 +23,7 @@ def spawn_gun_projectile(
     angle: float,
     spec: GunSpec,
     damage_scale: float = 1.0,
+    knockback_scale: float = 1.0,
 ):
     vertices = rectangle(*spec.projectile_size)
     direction = pygame.Vector2(math.cos(angle), math.sin(angle))
@@ -34,9 +36,10 @@ def spawn_gun_projectile(
         ConvexCollider(vertices=vertices, bounciness=0.0, is_trigger=True),
         Projectile(
             owner=shooter,
+            team=team_of(world, shooter),
             damage=spec.damage * damage_scale,
             pierce_left=spec.pierce,
-            knockback=spec.knockback,
+            knockback=spec.knockback * knockback_scale,
             crit_chance=spec.crit_chance,
             crit_multiplier=spec.crit_multiplier,
         ),

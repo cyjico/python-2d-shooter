@@ -11,6 +11,9 @@ class OffscreenDespawn:
 
     timeout: float
     """Seconds out of view before giving up."""
+    relocate: bool = False
+    """Instead of destroying it, move it to a fresh spot just off screen
+    (e.g. wave enemies, which must all be killed to end the wave)."""
 
     # Runtime state
     offscreen_time: float = 0.0

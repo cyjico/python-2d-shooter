@@ -13,6 +13,7 @@ from game.core_ecs.world import World
 from game.events.collision import CollisionEvent
 from game.events.combat import DamageEvent, ProjectileHitEvent
 from game.resources.event_bus import EventBus
+from game.util.factions import team_of
 
 
 def projectile_system(world: World):
@@ -42,6 +43,9 @@ def _handle_hit(
     if other == projectile.owner or other in projectile.hit:
         return
     if world.has_component(other, Projectile):
+        return
+    # No friendly fire: enemies' bullets pass through other enemies.
+    if projectile.team & team_of(world, other):
         return
 
     # Triggers don't stop projectiles.

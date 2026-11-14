@@ -1,3 +1,4 @@
+import random
 from functools import partial
 
 import pygame
@@ -7,17 +8,22 @@ from game.components.ai.charger import ChargerAI
 from game.components.ai.follow_target import FollowTargetAI
 from game.components.ai.hover_around_target import HoverAroundTargetAI
 from game.components.ai.random_dash import RandomDashAI
+from game.components.ai.shooter import ShooterAI
 from game.components.bounty import Bounty
 from game.components.contact_damage import ContactDamage
 from game.components.convex_collider import ConvexCollider
 from game.components.dash import Dash, DashIntent
 from game.components.faction import Team
 from game.components.health import Health
+from game.components.loadout import Loadout
 from game.components.mover import Mover
 from game.components.rigid_body import box_body
 from game.components.shape import Shape
 from game.components.split_on_death import SplitOnDeath
 from game.components.transform import Transform
+from game.components.weapon_intent import WeaponIntent
+from game.constants.gun_buffs import make_gun, roll_gun
+from game.constants.rarity import rarity_color
 from game.constants.splitter import SPLITTER_LARGE, SplitterTier
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
@@ -30,6 +36,22 @@ CHARGER_BOUNTY = 40
 CHASER_RADIUS = 14
 CHASER_BOUNTY = 25
 CHASER_COLOR = (220, 70, 70)
+
+SHOOTER_VERTICES = (
+    # A kite pointing along +x, so it's clear where it's aiming.
+    pygame.Vector2(18, 0),
+    pygame.Vector2(-8, -13),
+    pygame.Vector2(-12, 0),
+    pygame.Vector2(-8, 13),
+)
+SHOOTER_BOUNTY = 45
+SHOOTER_DAMAGE_SCALE = 0.25
+"""Enemies carry the player's guns at this fraction of their damage..."""
+SHOOTER_KNOCKBACK_SCALE = 0.05
+"""...and this fraction of their knockback, so hits nudge the player instead of
+launching them."""
+SHOOTER_HOVER_DIST = (160.0, 320.0)
+"""Preferred distance from the target, clamped to stay on screen."""
 
 
 def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
@@ -75,6 +97,42 @@ def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
         Transform(position=pygame.Vector2(pos)),
         Shape(vertices=vertices, color=CHASER_COLOR),
         ConvexCollider(vertices=vertices),
+    )
+
+
+def spawn_shooter(
+    world: World,
+    pos: pygame.Vector2,
+    player: Entity,
+    rng: random.Random | None = None,
+):
+    """Keeps its distance and shoots. Rolls its gun like the mystery box does,
+    and its body takes the gun's rarity color."""
+    spec, rarity = roll_gun(rng)
+    gun = make_gun(spec, rarity)
+
+    low, high = SHOOTER_HOVER_DIST
+    hover_dist = min(high, max(low, gun.spec.max_range * 0.6))
+    radius = max(v.length() for v in SHOOTER_VERTICES)
+
+    return world.create_entity(
+        AI(target=player, body_radius=radius),
+        Faction(Team.ENEMY),
+        HoverAroundTargetAI(preferred_dist=hover_dist),
+        ShooterAI(),
+        Loadout(
+            slots=[gun],
+            damage_scale=SHOOTER_DAMAGE_SCALE,
+            knockback_scale=SHOOTER_KNOCKBACK_SCALE,
+        ),
+        WeaponIntent(),
+        Mover(move_speed=160),
+        Health(maximum=50),
+        Bounty(SHOOTER_BOUNTY),
+        box_body(0.4, 15, 15, drag=0.4, angular_drag=0.4),
+        Transform(position=pygame.Vector2(pos)),
+        Shape(vertices=SHOOTER_VERTICES, color=rarity_color(rarity)),
+        ConvexCollider(vertices=SHOOTER_VERTICES),
     )
 
 

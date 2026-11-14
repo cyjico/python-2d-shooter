@@ -20,12 +20,17 @@ from game.components.stamina import Stamina
 from game.components.transform import Transform
 from game.components.wallet import Wallet
 from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
+from game.components.hud import WaveBannerLabel, WaveRemainingLabel
+from game.components.ui import UILabel
 from game.constants.enemy_spawning import (
-    INITIAL_ENEMIES,
+    EASY_ENEMY,
     SPAWN_MARGIN_MAX,
     SPAWN_MARGIN_MIN,
-    max_enemies,
-    spawn_interval,
+    max_alive,
+    special_count,
+    wave_roster,
+    wave_scaling,
+    wave_size,
 )
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
@@ -37,15 +42,19 @@ from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
 from game.components.projectile import Projectile
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.camera import Camera
-from game.resources.enemy_director import EnemyDirector
+from game.resources.enemy_director import EnemyDirector, WavePhase
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.run_stats import RunStats
 from game.resources.ui_state import UIState
-from game.systems.enemy_spawn import enemy_spawn_system
+from game.systems.enemy_spawn import enemy_spawn_system, wave_remaining
+from game.systems.last_enemy_cue import last_enemy_cue_render_system
 from game.systems.offscreen_despawn import offscreen_despawn_system
+from game.systems.wave_hud import wave_hud_system
+from game.systems.wave_scaling import wave_scaling_system
 from game.util.buffs import grant_buff, stat_bonus, stat_multiplier
 from game.util.factions import is_hostile
 from game.util.rng import DEFAULT_RNG
+from game.util.roman import to_roman
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -88,7 +97,7 @@ wallet = world.get_component(game.player, Wallet)
 box = world.get_component(game.mystery_box, MysteryBox)
 ui_state = world.get_resource(UIState)
 director = world.get_resource(EnemyDirector)
-director.backlog = 0
+# Hold off wave I, so the tests below control what's in the world.
 director.timer = math.inf
 
 
@@ -377,28 +386,112 @@ for e in smalls:
 for e in enemies() - known:
     world.destroy_entity(e)
 
-# Survival spawning: off screen, in the band, and ramping up.
-assert spawn_interval(600) < spawn_interval(0) and max_enemies(600) > max_enemies(0)
+# Waves: a fixed roster, few specials at first, more and stronger later.
+assert [to_roman(n) for n in (1, 4, 9, 14, 40, 1994)] == [
+    "I",
+    "IV",
+    "IX",
+    "XIV",
+    "XL",
+    "MCMXCIV",
+]
+assert wave_size(1) == 6 and wave_size(2) > wave_size(1)
+for seed in range(20):
+    roster = wave_roster(1, random.Random(seed))
+    assert len(roster) == 6
+    # One special, and only one unlocked on wave I.
+    assert [s for s in roster if s is not EASY_ENEMY] == [spawn_splitter]
 
-# The opening burst ignores the cap and spawns everything at once.
+
+def special_share(wave: int):
+    return special_count(wave, wave_size(wave)) / wave_size(wave)
+
+
+assert special_share(8) > special_share(1)
+assert wave_scaling(1).health == 1 and wave_scaling(5).health > 1
+
 for e in enemies():
     world.destroy_entity(e)
-known = enemies()
-director.backlog = INITIAL_ENEMIES
-enemy_spawn_system(world, 1 / 60)
-assert len(enemies() - known) == INITIAL_ENEMIES and director.backlog == 0
-for e in enemies() - known:
-    world.destroy_entity(e)
 camera = world.get_resource(Camera)
-for _ in range(200):  # the position is random, so sample it a lot
-    known = enemies()
-    director.elapsed, director.timer = 0.0, 0.0
-    enemy_spawn_system(world, 1 / 60)
-    (spawned,) = enemies() - known
-    pos = world.get_component(spawned, Transform).position
+remaining_label = next(l for _, (l, _) in world.query(UILabel, WaveRemainingLabel))
+banner_label = next(l for _, (l, _) in world.query(UILabel, WaveBannerLabel))
+
+
+def run_waves(frames: int = 1):
+    """Only the wave systems, so nothing moves or fights."""
+    for _ in range(frames):
+        enemy_spawn_system(world, 1 / 60)
+        wave_scaling_system(world)
+        wave_hud_system(world)
+
+
+def check_spawn(enemy):
+    pos = world.get_component(enemy, Transform).position
     assert not camera.is_circle_visible(pos, SPAWN_MARGIN_MIN - 1)
     assert camera.is_circle_visible(pos, SPAWN_MARGIN_MAX)
-    world.destroy_entity(spawned)
+    assert world.get_component(enemy, OffscreenDespawn).relocate
+
+
+# Wave I spawns exactly its roster, off screen, then a break follows.
+director.timer = 0.0
+run_waves()
+assert director.phase is WavePhase.ACTIVE and director.wave == 1
+assert world.get_resource(RunStats).wave == 1
+spawned = 0
+for _ in range(60 * 60):
+    for e in enemies():
+        check_spawn(e)
+        spawned += 1
+        world.destroy_entity(e)
+    if director.phase is WavePhase.BREAK:
+        break
+    run_waves()
+assert spawned == wave_size(1), spawned
+assert director.just_cleared and banner_label.text == "WAVE II"
+
+# Wave II: bigger, stronger, and the last enemy gets called out.
+director.timer = 0.0
+run_waves()
+assert director.wave == 2
+seen = set()
+for _ in range(60 * 60):
+    seen |= enemies()
+    if not director.roster:
+        break
+    if len(enemies()) >= max_alive(director.wave):
+        world.destroy_entity(next(iter(enemies())))
+    run_waves()
+assert len(seen) == wave_size(2), len(seen)
+
+probe = spawn_chaser(world, far_spot := camera.screen_to_world((5000, 5000)), game.player)
+base_hp = world.get_component(probe, Health).maximum
+wave_scaling_system(world)
+assert math.isclose(
+    world.get_component(probe, Health).maximum, base_hp * wave_scaling(2).health
+)
+world.destroy_entity(probe)
+
+*rest, last = enemies()
+for e in rest:
+    world.destroy_entity(e)
+assert wave_remaining(world) == 1
+run_waves()
+assert remaining_label.text == "1 ENEMY LEFT"
+# The cue draws both on screen (ring) and off screen (edge arrow).
+last_transform = world.get_component(last, Transform)
+last_transform.position = camera.screen_to_world(camera.viewport_size / 2)
+last_enemy_cue_render_system(world, game.screen)
+last_transform.position = far_spot
+last_enemy_cue_render_system(world, game.screen)
+
+world.destroy_entity(last)
+run_waves()
+assert director.phase is WavePhase.BREAK and banner_label.text == "WAVE III"
+assert wave_remaining(world) == 0
+
+# Back to no waves for the rest of the test.
+world.add_resource(EnemyDirector(timer=math.inf))
+director = world.get_resource(EnemyDirector)
 
 # Off-screen enemies give up after the timeout; coming into view resets it.
 camera = world.get_resource(Camera)
@@ -420,6 +513,17 @@ offscreen_despawn_system(world, 0.6)
 assert world.is_alive(stuck)
 offscreen_despawn_system(world, 0.6)
 assert not world.is_alive(stuck)
+
+# Wave enemies aren't destroyed but brought back just off screen.
+lost = spawn_chaser(world, far, game.player)
+world.add_component(lost, OffscreenDespawn(timeout=1.0, relocate=True))
+offscreen_despawn_system(world, 1.5)
+assert world.is_alive(lost)
+pos = world.get_component(lost, Transform).position
+assert not camera.is_circle_visible(pos, SPAWN_MARGIN_MIN - 1)
+assert camera.is_circle_visible(pos, SPAWN_MARGIN_MAX)
+assert world.get_component(lost, OffscreenDespawn).offscreen_time == 0.0
+world.destroy_entity(lost)
 
 step(60)
 

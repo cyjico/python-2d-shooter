@@ -1,4 +1,5 @@
-"""Survival spawning tuning: how fast, how many, and which enemies over time."""
+"""Wave spawning tuning: how many enemies each wave has, which ones, and how
+much stronger they get per wave."""
 
 import random
 from collections.abc import Callable
@@ -8,7 +9,12 @@ import pygame
 
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
+from game.prefabs.enemies import (
+    spawn_charger,
+    spawn_chaser,
+    spawn_shooter,
+    spawn_splitter,
+)
 from game.util.rng import resolve_rng
 
 EnemySpawn = Callable[[World, pygame.Vector2, Entity], Entity]
@@ -19,56 +25,96 @@ SPAWN_MARGIN_MIN = 50.0
 SPAWN_MARGIN_MAX = 250.0
 """...and at most this far, so enemies arrive "just" off screen."""
 GIVE_UP_TIME = 10.0
-"""Seconds a spawned enemy may stay off screen before it is despawned.
-Must comfortably exceed the time to walk in from SPAWN_MARGIN_MAX."""
+"""Seconds a wave enemy may stay off screen before it is moved back near the
+player. Must comfortably exceed the time to walk in from SPAWN_MARGIN_MAX."""
 
-# How often
-START_INTERVAL = 6.0
-"""Seconds between spawns at the start."""
-MIN_INTERVAL = 0.8
-"""The interval never drops below this."""
-INTERVAL_HALF_LIFE = 90.0
-"""Seconds survived for the gap between START_INTERVAL and MIN_INTERVAL to halve."""
+# Pacing
+FIRST_BREAK_TIME = 2.0
+"""Seconds before wave I, long enough to read its banner."""
+BREAK_TIME = 8.0
+"""Seconds between clearing a wave and the next one starting."""
+OPENING_SPAWNS = 2
+"""Enemies spawned the moment a wave starts. The rest trickle in."""
 
 # How many
-INITIAL_ENEMIES = 2
-"""Enemies spawned off screen on the first update, ignoring the cap."""
-START_MAX_ENEMIES = 8
-"""Alive-enemy cap at the start (map-placed enemies count too)."""
-EXTRA_ENEMY_EVERY = 20.0
-"""One more enemy allowed per this many seconds survived."""
-HARD_MAX_ENEMIES = 60
+BASE_WAVE_SIZE = 6
+WAVE_SIZE_STEP = 3
+"""Enemies added per wave."""
+MAX_WAVE_SIZE = 80
 
 
 @dataclass(frozen=True, slots=True)
 class EnemySpawnEntry:
     spawn: EnemySpawn
     weight: float
-    """Relative chance among the unlocked entries."""
-    unlock_time: float = 0.0
-    """Seconds survived before this can spawn."""
+    """Relative chance among the unlocked special enemies."""
+    unlock_wave: int = 1
+    """First wave this can appear in."""
 
 
-ENEMY_TABLE: tuple[EnemySpawnEntry, ...] = (
-    EnemySpawnEntry(spawn_chaser, weight=4, unlock_time=0.0),
-    EnemySpawnEntry(spawn_splitter, weight=6, unlock_time=2.0),
-    EnemySpawnEntry(spawn_charger, weight=5, unlock_time=8.0),
+EASY_ENEMY: EnemySpawn = spawn_chaser
+"""Fills every slot of a wave that isn't special."""
+
+SPECIAL_ENEMIES: tuple[EnemySpawnEntry, ...] = (
+    EnemySpawnEntry(spawn_splitter, weight=5, unlock_wave=1),
+    EnemySpawnEntry(spawn_charger, weight=5, unlock_wave=2),
+    EnemySpawnEntry(spawn_shooter, weight=4, unlock_wave=3),
 )
-"""At least one entry must have `unlock_time` 0."""
+"""At least one entry must unlock on wave 1."""
 
 
-def spawn_interval(elapsed: float):
-    """Seconds until the next spawn, shrinking toward MIN_INTERVAL."""
-    decay = 0.5 ** (elapsed / INTERVAL_HALF_LIFE)
-    return MIN_INTERVAL + (START_INTERVAL - MIN_INTERVAL) * decay
+@dataclass(frozen=True, slots=True)
+class WaveScaling:
+    """Stat multipliers for enemies of a wave."""
+
+    health: float
+    damage: float
+    move_speed: float
+    bounty: float
 
 
-def max_enemies(elapsed: float):
-    return min(HARD_MAX_ENEMIES, START_MAX_ENEMIES + int(elapsed / EXTRA_ENEMY_EVERY))
+def wave_size(wave: int):
+    """Enemies in `wave` (not counting splitter offspring)."""
+    return min(MAX_WAVE_SIZE, BASE_WAVE_SIZE + WAVE_SIZE_STEP * (wave - 1))
 
 
-def roll_enemy(elapsed: float, rng: random.Random | None = None):
-    """Spawn function of a weighted pick among the enemies unlocked by `elapsed`."""
-    unlocked = [e for e in ENEMY_TABLE if e.unlock_time <= elapsed]
-    weights = [e.weight for e in unlocked]
-    return resolve_rng(rng).choices(unlocked, weights=weights)[0].spawn
+def special_count(wave: int, size: int):
+    """How many of a wave's `size` enemies are special: few at first, up to 60%."""
+    share = min(0.6, 0.1 + 0.08 * (wave - 1))
+    return min(size, max(1, round(size * share)))
+
+
+def wave_scaling(wave: int):
+    step = wave - 1
+    return WaveScaling(
+        health=1 + 0.15 * step,
+        damage=1 + 0.10 * step,
+        move_speed=min(1.35, 1 + 0.03 * step),
+        bounty=1 + 0.10 * step,
+    )
+
+
+def spawn_interval(wave: int):
+    """Seconds between spawns while a wave is trickling in."""
+    return max(0.5, 2.0 - 0.1 * (wave - 1))
+
+
+def max_alive(wave: int):
+    """Wave enemies alive at once; the rest wait their turn."""
+    return 4 + wave
+
+
+def wave_roster(wave: int, rng: random.Random | None = None) -> list[EnemySpawn]:
+    """Every enemy of `wave`, in spawn order."""
+    rng = resolve_rng(rng)
+    size = wave_size(wave)
+    specials = special_count(wave, size)
+
+    unlocked = [e for e in SPECIAL_ENEMIES if e.unlock_wave <= wave]
+    roster = [
+        e.spawn
+        for e in rng.choices(unlocked, weights=[e.weight for e in unlocked], k=specials)
+    ]
+    roster += [EASY_ENEMY] * (size - specials)
+    rng.shuffle(roster)
+    return roster

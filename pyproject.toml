@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "2D top-down shooter"
 requires-python = ">=3.14"
 dependencies = [
+    "numpy>=2.3.2",
     "pygame-ce>=2.5.8",
 ]
 

@@ -132,6 +132,12 @@ class Loadout:
     """Where projectiles spawn. Local to the entity's transform. The default
     (the center) means there's no dead zone right in front of the shooter:
     an enemy touching its nose still gets hit."""
+    damage_scale: float = 1.0
+    """Multiplies every projectile's damage. Lets enemies carry the player's guns
+    without hitting as hard."""
+    knockback_scale: float = 1.0
+    """Multiplies every projectile's knockback. The player is light, so enemy
+    guns need far less than the player's to not launch them."""
 
     @property
     def equipped(self):

@@ -13,3 +13,5 @@ class RunStats:
     """Paid mystery box openings. Rerolls don't count as new openings."""
     time_survived: float = 0.0
     """Seconds."""
+    wave: int = 0
+    """Highest wave reached."""
