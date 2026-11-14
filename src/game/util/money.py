@@ -5,7 +5,7 @@ from game.core_ecs.world import World
 from game.util.buffs import stat_multiplier
 
 
-def earn_money(world: World, entity: Entity, base_amount: int) -> int:
+def earn_money(world: World, entity: Entity, base_amount: int):
     """Pays `entity` its money multiplier x `base_amount`. Returns what was paid
     (0 if the entity has no Wallet)."""
     wallet = world.try_get_component(entity, Wallet)

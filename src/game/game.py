@@ -47,12 +47,14 @@ from game.resources.ui_state import UIState
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
+from game.systems.ai.random_dash import random_dash_ai_system
 from game.systems.bounty import bounty_system
 from game.systems.breakable import break_cleanup_system, breakable_system
 from game.systems.buff import buff_drop_system, buff_tick_system
 from game.systems.buff_hud import buff_hud_system
 from game.systems.camera_follow import camera_follow_system
 from game.systems.collision import collision_system
+from game.systems.contact_damage import contact_damage_system
 from game.systems.damage_numbers import (
     damage_number_render_system,
     damage_number_spawn_system,
@@ -224,6 +226,7 @@ class Game:
         # Generic AI Movement
         follow_target_ai_system(self.world, dt)
         hover_around_target_ai_system(self.world, dt)
+        random_dash_ai_system(self.world, dt)
 
         mover_system(self.world, dt)
         dash_system(self.world, dt)
@@ -235,6 +238,7 @@ class Game:
 
         dash_impact_system(self.world)
         charger_ai_collision_system(self.world)
+        contact_damage_system(self.world, dt)
 
         projectile_system(self.world)
 

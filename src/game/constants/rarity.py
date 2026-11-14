@@ -2,6 +2,7 @@ import random
 from dataclasses import dataclass
 
 from game.components.loadout import Rarity
+from game.util.rng import resolve_rng
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +31,7 @@ def rarity_color(rarity: Rarity | None):
 
 def roll_rarity(rng: random.Random | None = None):
     """Rarity weighted by RARITIES."""
-    rng = rng or random.Random()
     tiers = list(RARITIES)
-    return rng.choices(tiers, weights=[RARITIES[t].weight for t in tiers])[0]
+    return resolve_rng(rng).choices(tiers, weights=[RARITIES[t].weight for t in tiers])[
+        0
+    ]

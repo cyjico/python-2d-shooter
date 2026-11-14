@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from game.components.loadout import Gun, GunSpec, Rarity
 from game.constants.guns import ALL_GUNS
 from game.constants.rarity import RARITIES, roll_rarity
+from game.util.rng import resolve_rng
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +81,5 @@ def describe_buff(spec_id: str, rarity: Rarity):
 
 def roll_gun(rng: random.Random | None = None):
     """Uniform gun type, rarity weighted by RARITIES."""
-    rng = rng or random.Random()
-    spec = rng.choice(list(ALL_GUNS.values()))
+    spec = resolve_rng(rng).choice(list(ALL_GUNS.values()))
     return spec, roll_rarity(rng)

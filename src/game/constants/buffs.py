@@ -3,6 +3,7 @@ import random
 from game.components.buffs import BuffSpec, Flag, Stat
 from game.components.loadout import Rarity
 from game.constants.rarity import roll_rarity
+from game.util.rng import resolve_rng
 
 SPEED_BOOST = BuffSpec(
     id="speed",
@@ -85,7 +86,7 @@ MONEY_BOOSTS: dict[Rarity, BuffSpec] = {
 def roll_buff(rng: random.Random | None = None):
     """Uniform over the fixed buffs and the money boost; money's tier is
     weighted by RARITIES."""
-    rng = rng or random.Random()
+    rng = resolve_rng(rng)
     kind = rng.choice([*ALL_BUFFS, MONEY_BOOST_ID])
     if kind == MONEY_BOOST_ID:
         return MONEY_BOOSTS[roll_rarity(rng)]

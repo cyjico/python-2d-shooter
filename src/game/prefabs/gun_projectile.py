@@ -11,6 +11,7 @@ from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
+from game.util.geometry import rectangle
 
 
 def spawn_gun_projectile(
@@ -21,14 +22,7 @@ def spawn_gun_projectile(
     spec: GunSpec,
     damage_scale: float = 1.0,
 ):
-    length, width = spec.projectile_size
-    hl, hw = length / 2, width / 2
-    vertices = (
-        pygame.Vector2(-hl, -hw),
-        pygame.Vector2(hl, -hw),
-        pygame.Vector2(hl, hw),
-        pygame.Vector2(-hl, hw),
-    )
+    vertices = rectangle(*spec.projectile_size)
     direction = pygame.Vector2(math.cos(angle), math.sin(angle))
 
     world.create_entity(
