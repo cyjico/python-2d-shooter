@@ -12,7 +12,7 @@ from game.components.dash import Dash, DashIntent
 from game.components.enemy import Enemy
 from game.components.health import Health
 from game.components.mover import Mover
-from game.components.rigid_body import RigidBody, inertia_of_box, mass_of_box
+from game.components.rigid_body import box_body
 from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
@@ -32,7 +32,6 @@ def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
 
     charger_ai = ChargerAI(component_mask=Enemy, charge_distance_sqr=800**2)
 
-    mass = mass_of_box(0.4, CHARGER_RADIUS, CHARGER_RADIUS)
     return world.create_entity(
         AI(target=player),
         Enemy(),
@@ -41,12 +40,7 @@ def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
         Mover(move_speed=150),
         Health(maximum=60),
         Bounty(CHARGER_BOUNTY),
-        RigidBody(
-            mass=mass,
-            drag=0.4,
-            inertia=inertia_of_box(mass, CHARGER_RADIUS, CHARGER_RADIUS),
-            angular_drag=0.4,
-        ),
+        box_body(0.4, CHARGER_RADIUS, CHARGER_RADIUS, drag=0.4, angular_drag=0.4),
         Transform(position=pygame.Vector2(pos)),
         Shape(vertices=vertices, color=charger_ai.base_color),
         ConvexCollider(vertices=vertices),
@@ -56,7 +50,6 @@ def spawn_charger(world: World, pos: pygame.Vector2, player: Entity):
 def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
     vertices = regular_polygon(3, CHASER_RADIUS)
 
-    mass = mass_of_box(0.4, CHASER_RADIUS, CHASER_RADIUS)
     return world.create_entity(
         AI(target=player, body_radius=CHASER_RADIUS),
         Enemy(),
@@ -68,12 +61,7 @@ def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
         ContactDamage(amount=10),
         Health(maximum=40),
         Bounty(CHASER_BOUNTY),
-        RigidBody(
-            mass=mass,
-            drag=0.4,
-            inertia=inertia_of_box(mass, CHASER_RADIUS, CHASER_RADIUS),
-            angular_drag=0.4,
-        ),
+        box_body(0.4, CHASER_RADIUS, CHASER_RADIUS, drag=0.4, angular_drag=0.4),
         Transform(position=pygame.Vector2(pos)),
         Shape(vertices=vertices, color=CHASER_COLOR),
         ConvexCollider(vertices=vertices),

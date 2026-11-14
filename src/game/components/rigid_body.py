@@ -109,3 +109,21 @@ def mass_of_box(density: float, width: float, height: float):
 def inertia_of_box(mass: float, width: float, height: float):
     """Inertia of a solid rectangle spinning around its center."""
     return mass * (width**2 + height**2) / 12
+
+
+def box_body(
+    density: float,
+    width: float,
+    height: float,
+    *,
+    drag: float = 0.0,
+    angular_drag: float = 0.0,
+):
+    """A RigidBody with the mass and inertia of a solid rectangle."""
+    mass = mass_of_box(density, width, height)
+    return RigidBody(
+        mass=mass,
+        drag=drag,
+        inertia=inertia_of_box(mass, width, height),
+        angular_drag=angular_drag,
+    )
