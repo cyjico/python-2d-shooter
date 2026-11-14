@@ -24,6 +24,7 @@ from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.util.buffs import grant_buff, stat_bonus, stat_multiplier
+from game.util.factions import is_hostile
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -213,6 +214,8 @@ assert stat_multiplier(world, game.player, Stat.STAMINA_REGEN) == 2.0
 assert abs(stamina.current - stamina.regen_rate * 2.0 / 60) < 1e-6, stamina.current
 
 chaser = spawn_chaser(world, KILL_SPOT, game.player)
+assert is_hostile(world, chaser, game.player) and is_hostile(world, game.player, chaser)
+assert not is_hostile(world, chaser, chaser)
 dasher = world.get_component(chaser, RandomDashAI)
 dasher.chance, dasher.timer, dasher.max_target_dist_sqr = 1.0, 0.0, math.inf
 step()
