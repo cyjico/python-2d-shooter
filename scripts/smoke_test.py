@@ -173,13 +173,17 @@ stamina = world.get_component(game.player, Stamina)
 dash = world.get_component(game.player, Dash)
 stamina.current = 2.0
 press(pygame.K_SPACE)
+assert dash.active, "affordable dash should start"
 assert 0.9 < stamina.current < 1.2, stamina.current
 step(20)
+assert not dash.active, "dash should have ended"
 press(pygame.K_SPACE)
+assert dash.active, "second affordable dash should start"
 assert stamina.current < 0.5, stamina.current
 step(20)
 press(pygame.K_SPACE)
-assert not dash.active and stamina.current < 1.0
+assert not dash.active, "unaffordable dash should be refused"
+assert stamina.current < 1.0
 
 
 # Stamina buffs: expiring clamps bars back down.
