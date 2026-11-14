@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from typing import Any, TypeVar, cast, overload
+from typing import Any, cast, overload
 
 from .entity import Entity
 

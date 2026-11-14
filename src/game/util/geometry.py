@@ -1,10 +1,9 @@
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 import pygame
 
 from game.components.transform import Transform
-from game.core_ecs.world import World
 
 
 def get_aabb(

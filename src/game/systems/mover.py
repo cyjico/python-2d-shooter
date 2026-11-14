@@ -1,13 +1,8 @@
-import math
-
 from game.components.buffs import Stat
 from game.components.mover import Mover
-from game.components.player import Player
 from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.world import World
-from game.resources.camera import Camera
-from game.resources.input_state import InputState
 from game.util.buffs import stat_multiplier
 from game.util.numerics import wrap_angle
 

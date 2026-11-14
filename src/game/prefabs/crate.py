@@ -3,7 +3,7 @@ import pygame
 from game.components.breakable import Breakable
 from game.components.buff_drop import BuffDrop
 from game.components.convex_collider import ConvexCollider
-from game.components.rigid_body import RigidBody, box_body, inertia_of_box, mass_of_box
+from game.components.rigid_body import box_body
 from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.world import World

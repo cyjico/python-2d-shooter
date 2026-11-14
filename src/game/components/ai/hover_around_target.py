@@ -1,7 +1,5 @@
 from dataclasses import dataclass, field
 
-from game.core_ecs.entity import Entity
-
 
 @dataclass(slots=True)
 class HoverAroundTargetAI:

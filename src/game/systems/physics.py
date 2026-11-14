@@ -1,5 +1,3 @@
-import pygame
-
 from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.world import World
