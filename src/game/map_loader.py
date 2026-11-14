@@ -8,7 +8,7 @@ from game.components.shape import Shape
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-from game.prefabs.enemies import spawn_charger, spawn_chaser
+from game.prefabs.enemies import spawn_charger, spawn_chaser, spawn_splitter
 from game.util.geometry import rectangle
 
 TILE_SIZE = 40
@@ -16,9 +16,11 @@ TILE_SIZE = 40
 
 WALL_COLOR = (90, 90, 110)
 
+
 ENEMY_SPAWNERS = {
     "X": spawn_charger,
     "Z": spawn_chaser,
+    "S": spawn_splitter,
 }
 
 

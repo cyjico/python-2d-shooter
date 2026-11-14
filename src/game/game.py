@@ -76,6 +76,7 @@ from game.systems.player_weapon_input import player_weapon_input_system
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
 from game.systems.spawner import spawner_system
+from game.systems.split_on_death import split_on_death_system
 from game.systems.stamina import stamina_system
 from game.systems.stamina_hud import stamina_hud_system
 from game.systems.ui.interaction import ui_interaction_system
@@ -278,6 +279,7 @@ class Game:
         health_system(self.world)
         damage_number_spawn_system(self.world)
         bounty_system(self.world)
+        split_on_death_system(self.world)
         breakable_system(self.world)
         # Reads the BrokenEvents just emitted.
         buff_drop_system(self.world)
