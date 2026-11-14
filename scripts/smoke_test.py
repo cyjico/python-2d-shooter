@@ -1,5 +1,6 @@
 import math
 import os
+import random
 from dataclasses import replace
 
 import pygame
@@ -12,6 +13,7 @@ from game.components.health import Health
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.relocatable import Relocatable
+from game.components.rigid_body import RigidBody
 from game.components.split_on_death import SplitOnDeath
 from game.components.stamina import Stamina
 from game.components.transform import Transform
@@ -26,11 +28,16 @@ from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.util.buffs import grant_buff, stat_bonus, stat_multiplier
 from game.util.factions import is_hostile
+from game.util.rng import DEFAULT_RNG
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 game = Game()
+
+
+random.seed(1234)
+DEFAULT_RNG.seed(1234)
 
 
 def step(frames: int = 1):
@@ -240,7 +247,10 @@ def enemies():
 
 
 def kill(entity):
-    pos = pygame.Vector2(world.get_component(entity, Transform).position)
+    t = world.get_component(entity, Transform)
+    t.position = pygame.Vector2(KILL_SPOT)
+    world.get_component(entity, RigidBody).linear_velocity.update(0, 0)
+    pos = pygame.Vector2(t.position)
     spawn_gun_projectile(world, game.player, pos, 0.0, slow_pistol, damage_scale=1e9)
     step()
     assert not world.is_alive(entity)
