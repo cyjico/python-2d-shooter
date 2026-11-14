@@ -1,3 +1,5 @@
+from functools import partial
+
 import pygame
 
 from game.components.ai import AI
@@ -14,7 +16,9 @@ from game.components.health import Health
 from game.components.mover import Mover
 from game.components.rigid_body import box_body
 from game.components.shape import Shape
+from game.components.split_on_death import SplitOnDeath
 from game.components.transform import Transform
+from game.constants.splitter import SPLITTER_LARGE, SplitterTier
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.util.factions import Faction
@@ -67,3 +71,39 @@ def spawn_chaser(world: World, pos: pygame.Vector2, player: Entity):
         Shape(vertices=vertices, color=CHASER_COLOR),
         ConvexCollider(vertices=vertices),
     )
+
+
+def spawn_splitter(
+    world: World,
+    pos: pygame.Vector2,
+    target: Entity | None,
+    tier: SplitterTier = SPLITTER_LARGE,
+):
+    """A chaser that splits into `tier.children` of `tier.child_tier` on death."""
+    vertices = regular_polygon(4, tier.radius)
+
+    entity = world.create_entity(
+        AI(target=target, body_radius=tier.radius),
+        Faction(Team.ENEMY),
+        FollowTargetAI(),
+        Mover(move_speed=tier.move_speed),
+        ContactDamage(amount=tier.contact_damage),
+        Health(maximum=tier.health),
+        Bounty(tier.bounty),
+        box_body(0.4, tier.radius, tier.radius, drag=0.4, angular_drag=0.4),
+        Transform(position=pygame.Vector2(pos)),
+        Shape(vertices=vertices, color=tier.color),
+        ConvexCollider(vertices=vertices),
+    )
+
+    if tier.child_tier is not None:
+        world.add_component(
+            entity,
+            SplitOnDeath(
+                count=tier.children,
+                spawn=partial(spawn_splitter, tier=tier.child_tier),
+                spread_distance=tier.radius,
+            ),
+        )
+
+    return entity
