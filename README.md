@@ -68,3 +68,13 @@ pyinstaller --noconfirm --windowed --name Shooter --paths src --add-data "src/as
 The result is in `dist/Shooter/`. Distribute the whole folder (zip it), not just the executable.
 
 If the executable closes immediately, rebuild without `--windowed` and run it from a terminal to see the error.
+
+## Development
+
+Install the dev tools, then lint and format:
+
+```bash
+python -m pip install -e ".[dev]"
+ruff check --fix src
+ruff format src
+```

@@ -4,13 +4,12 @@
 
   // List of extensions which should be recommended for users of this workspace.
   "recommendations": [
-    "ms-python.black-formatter",
     "ms-python.debugpy",
-    "ms-python.isort",
     "ms-python.python",
     "ms-python.vscode-pylance",
     "ms-python.vscode-python-envs",
-    "njpwerner.autodocstring"
+    "njpwerner.autodocstring",
+    "charliermarsh.ruff"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []
