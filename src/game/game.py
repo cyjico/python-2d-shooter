@@ -71,6 +71,7 @@ from game.systems.inventory_hud import inventory_hud_system
 from game.systems.lifetime import lifetime_system
 from game.systems.mover import mover_system
 from game.systems.mystery_box import mystery_box_system
+from game.systems.offscreen_despawn import offscreen_despawn_system
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
 from game.systems.player_dash_input import player_dash_input_system
@@ -292,6 +293,7 @@ class Game:
         break_cleanup_system(self.world)
         death_cleanup_system(self.world)
         lifetime_system(self.world, dt)
+        offscreen_despawn_system(self.world, dt)
 
     def _hud_phase(self):
         weapon_status_hud_system(self.world)

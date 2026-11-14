@@ -18,6 +18,9 @@ SPAWN_MARGIN_MIN = 50.0
 """Spawn points are at least this far (px) outside the camera view..."""
 SPAWN_MARGIN_MAX = 250.0
 """...and at most this far, so enemies arrive "just" off screen."""
+GIVE_UP_TIME = 10.0
+"""Seconds a spawned enemy may stay off screen before it is despawned.
+Must comfortably exceed the time to walk in from SPAWN_MARGIN_MAX."""
 
 # How often
 START_INTERVAL = 6.0

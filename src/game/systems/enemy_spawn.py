@@ -1,8 +1,10 @@
 import random
 
 from game.components.faction import Faction, Team
+from game.components.offscreen_despawn import OffscreenDespawn
 from game.components.player import Player
 from game.constants.enemy_spawning import (
+    GIVE_UP_TIME,
     SPAWN_MARGIN_MAX,
     SPAWN_MARGIN_MIN,
     max_enemies,
@@ -43,4 +45,7 @@ def enemy_spawn_system(world: World, dt: float, rng: random.Random | None = None
 
     camera = world.get_resource(Camera)
     position = camera.random_point_outside_view(SPAWN_MARGIN_MIN, SPAWN_MARGIN_MAX, rng)
-    roll_enemy(director.elapsed, rng)(world, position, player)
+    enemy = roll_enemy(director.elapsed, rng)(world, position, player)
+    # Stranded spawns (outside the map, behind walls) give up eventually.
+    # Enemies that never make it into view are despawned by offscreen_despawn_system.
+    world.add_component(enemy, OffscreenDespawn(GIVE_UP_TIME))
