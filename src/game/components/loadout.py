@@ -50,6 +50,10 @@ class GunSpec:
     """Extra targets a projectile passes through after the first."""
     knockback: float = 0.0
     """Impulse applied to whatever a projectile hits (depends on target mass)."""
+    crit_chance: float = 0.1
+    """Chance, from 0 to 1, that a hit is critical. Rolled per hit."""
+    crit_multiplier: float = 2.0
+    """Damage multiplier of a critical hit."""
 
     projectile_size: tuple[float, float] = (10.0, 4.0)
     projectile_color: tuple[int, int, int] = (255, 230, 120)
@@ -64,6 +68,11 @@ class GunSpec:
 
         if self.pellets <= 0:
             raise ValueError(f"{self.id}: pellets must be positive")
+
+        if not 0 <= self.crit_chance <= 1:
+            raise ValueError(f"{self.id}: crit_chance must be between 0 and 1")
+        if self.crit_multiplier < 1:
+            raise ValueError(f"{self.id}: crit_multiplier must be at least 1")
 
 
 @dataclass(slots=True)
