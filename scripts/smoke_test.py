@@ -21,6 +21,7 @@ from game.components.transform import Transform
 from game.components.wallet import Wallet
 from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
 from game.constants.enemy_spawning import (
+    INITIAL_ENEMIES,
     SPAWN_MARGIN_MAX,
     SPAWN_MARGIN_MIN,
     max_enemies,
@@ -53,6 +54,7 @@ wallet = world.get_component(game.player, Wallet)
 box = world.get_component(game.mystery_box, MysteryBox)
 ui_state = world.get_resource(UIState)
 director = world.get_resource(EnemyDirector)
+director.backlog = 0
 director.timer = math.inf
 
 
@@ -293,7 +295,14 @@ for e in enemies() - known:
 # Survival spawning: off screen, in the band, and ramping up.
 assert spawn_interval(600) < spawn_interval(0) and max_enemies(600) > max_enemies(0)
 
+# The opening burst ignores the cap and spawns everything at once.
 for e in enemies():
+    world.destroy_entity(e)
+known = enemies()
+director.backlog = INITIAL_ENEMIES
+enemy_spawn_system(world, 1 / 60)
+assert len(enemies() - known) == INITIAL_ENEMIES and director.backlog == 0
+for e in enemies() - known:
     world.destroy_entity(e)
 camera = world.get_resource(Camera)
 for _ in range(200):  # the position is random, so sample it a lot
