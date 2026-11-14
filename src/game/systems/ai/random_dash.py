@@ -22,7 +22,7 @@ def random_dash_ai_system(world: World, dt: float, rng: random.Random | None = N
         if ai.target is None:
             continue
 
-        dasher.timer -= dt
+        dasher.timer = max(0.0, dasher.timer - dt)
         if dasher.timer > 0 or not dash.ready:
             continue
         dasher.timer = rng.uniform(*dasher.interval)
