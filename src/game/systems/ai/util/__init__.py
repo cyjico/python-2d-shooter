@@ -7,8 +7,7 @@ from game.components.ai import AI
 from game.core_ecs.world import World
 from game.util.geometry import rot_to_vec2
 from game.util.raycast import raycast_static_bundle
-
-_default_rng = random.Random()
+from game.util.rng import resolve_rng
 
 
 def correct_want_dir(
@@ -63,7 +62,7 @@ def random_open_direction(
     Returns:
         pygame.Vector2 | None: `None` if every try was blocked.
     """
-    rng = rng or _default_rng
+    rng = resolve_rng(rng)
     for _ in range(tries):
         direction = rot_to_vec2(rng.uniform(0.0, math.tau))
         if not raycast_static_bundle(world, pos, direction, distance, ai.body_radius):

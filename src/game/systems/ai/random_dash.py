@@ -6,13 +6,12 @@ from game.components.dash import Dash, DashIntent
 from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.systems.ai.util import random_open_direction
-
-_default_rng = random.Random()
+from game.util.rng import resolve_rng
 
 
 def random_dash_ai_system(world: World, dt: float, rng: random.Random | None = None):
     """Requests dashes for RandomDashAI. Run after the movement AIs, before dash_system."""
-    rng = rng or _default_rng
+    rng = resolve_rng(rng)
 
     for ent, (dasher,) in world.query(RandomDashAI):
         ai = world.get_component(ent, AI)

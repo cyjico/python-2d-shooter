@@ -25,9 +25,8 @@ from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
 from game.systems.mystery_box.menu import clear_menu, set_prompt, show_menu
 from game.systems.mystery_box.placement import nearest_box
+from game.util.rng import resolve_rng
 from game.util.spawn_points import relocate
-
-_default_rng = random.Random()
 
 
 @dataclass(slots=True)
@@ -57,7 +56,7 @@ def mystery_box_system(world: World, dt: float, rng: random.Random | None = None
     f = _Frame(
         world=world,
         dt=dt,
-        rng=rng or _default_rng,
+        rng=resolve_rng(rng),
         session=world.get_resource(MysteryBoxSession),
         inputs=world.get_resource(InputState),
         clicked={

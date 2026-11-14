@@ -8,8 +8,7 @@ from game.components.rigid_body import RigidBody
 from game.components.transform import Transform
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
-
-_default_rng = random.Random()
+from game.util.rng import resolve_rng
 
 
 def free_points(
@@ -57,5 +56,5 @@ def relocate(world: World, entity: Entity, rng: random.Random | None = None):
     if not candidates:
         return False
 
-    transform.position = pygame.Vector2((rng or _default_rng).choice(candidates))
+    transform.position = pygame.Vector2(resolve_rng(rng).choice(candidates))
     return True
