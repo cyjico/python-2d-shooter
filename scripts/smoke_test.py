@@ -1,11 +1,14 @@
+import math
 import os
 from dataclasses import replace
 
 import pygame
 
+from game.components.ai.random_dash import RandomDashAI
 from game.components.bounty import Bounty
 from game.components.buffs import ActiveBuffs, Stat
 from game.components.dash import Dash
+from game.components.health import Health
 from game.components.loadout import Loadout, Rarity
 from game.components.mystery_box import MysteryBox
 from game.components.relocatable import Relocatable
@@ -16,7 +19,7 @@ from game.constants.buffs import EXTRA_STAMINA, MONEY_BOOSTS, QUICK_RECOVERY
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.game import Game
-from game.prefabs.enemies import spawn_charger
+from game.prefabs.enemies import spawn_charger, spawn_chaser
 from game.prefabs.gun_projectile import spawn_gun_projectile
 from game.resources.mystery_box_session import BoxPhase, MysteryBoxSession
 from game.resources.ui_state import UIState
@@ -208,6 +211,21 @@ stamina.current = 0.0
 step()
 assert stat_multiplier(world, game.player, Stat.STAMINA_REGEN) == 2.0
 assert abs(stamina.current - stamina.regen_rate * 2.0 / 60) < 1e-6, stamina.current
+
+chaser = spawn_chaser(world, KILL_SPOT, game.player)
+dasher = world.get_component(chaser, RandomDashAI)
+dasher.chance, dasher.timer, dasher.max_target_dist_sqr = 1.0, 0.0, math.inf
+step()
+assert world.get_component(chaser, Dash).active, "chaser should dash"
+
+health = world.get_component(game.player, Health)
+before = health.current
+world.get_component(chaser, Transform).position = pygame.Vector2(
+    world.get_component(game.player, Transform).position
+)
+step()
+assert health.current < before, "chaser contact should hurt"
+world.destroy_entity(chaser)
 
 step(60)
 
