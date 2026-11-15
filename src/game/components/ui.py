@@ -38,6 +38,8 @@ class UILabel:
     color: tuple[int, int, int] = (255, 255, 255)
     stars: int = 0
     """Stars drawn after the text, in the same color (e.g. a gun's rarity)."""
+    align_left: bool = False
+    """Start at the rect's left edge instead of centering."""
 
 
 class ButtonState(Enum):

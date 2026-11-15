@@ -138,6 +138,12 @@ class Loadout:
     knockback_scale: float = 1.0
     """Multiplies every projectile's knockback. The player is light, so enemy
     guns need far less than the player's to not launch them."""
+    fire_rate_scale: float = 1.0
+    """Multiplies every gun's fire rate (e.g. a drone's Overclock)."""
+    extra_projectiles: int = 0
+    """Extra bullets fanned out around every shot."""
+    pierce_bonus: int = 0
+    """Extra targets every bullet passes through."""
 
     @property
     def equipped(self):

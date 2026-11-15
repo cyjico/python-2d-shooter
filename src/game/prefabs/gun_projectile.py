@@ -24,7 +24,12 @@ def spawn_gun_projectile(
     spec: GunSpec,
     damage_scale: float = 1.0,
     knockback_scale: float = 1.0,
+    *,
+    pierce: int | None = None,
+    crit_chance: float | None = None,
+    crit_multiplier: float | None = None,
 ):
+    """`pierce`, `crit_chance` and `crit_multiplier` default to the spec's."""
     vertices = rectangle(*spec.projectile_size)
     direction = pygame.Vector2(math.cos(angle), math.sin(angle))
 
@@ -38,10 +43,12 @@ def spawn_gun_projectile(
             owner=shooter,
             team=team_of(world, shooter),
             damage=spec.damage * damage_scale,
-            pierce_left=spec.pierce,
+            pierce_left=spec.pierce if pierce is None else pierce,
             knockback=spec.knockback * knockback_scale,
-            crit_chance=spec.crit_chance,
-            crit_multiplier=spec.crit_multiplier,
+            crit_chance=spec.crit_chance if crit_chance is None else crit_chance,
+            crit_multiplier=(
+                spec.crit_multiplier if crit_multiplier is None else crit_multiplier
+            ),
         ),
         Lifetime(spec.max_range / spec.projectile_speed),
     )

@@ -129,3 +129,6 @@ class World:
             return cast(T, self._resources[resource_type])
         except KeyError:
             raise KeyError(f"Resource {resource_type.__name__} not found")
+
+    def try_get_resource[T](self, resource_type: type[T]) -> T | None:
+        return cast(T | None, self._resources.get(resource_type))

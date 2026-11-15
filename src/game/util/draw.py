@@ -99,3 +99,38 @@ def draw_bar(
     pygame.draw.rect(
         surface, border_color, rect, width=border_width, border_radius=border_radius
     )
+
+
+def draw_edge_arrow(
+    surface: pygame.Surface,
+    target: pygame.Vector2,
+    color: Color,
+    inset: float,
+    length: float,
+    half_width: float,
+    bob: float = 0.0,
+):
+    """An arrow on the screen's border pointing from the center toward
+    `target` (screen space, usually off screen). `inset` is the gap between
+    the tip and the edge; `bob` pushes the tip toward the target, px."""
+    half = pygame.Vector2(surface.get_size()) / 2
+    offset = target - half
+    if offset.length_squared() == 0:
+        return
+
+    # Scale the offset down until it touches the inset screen border.
+    limits = []
+    if offset.x:
+        limits.append((half.x - inset) / abs(offset.x))
+    if offset.y:
+        limits.append((half.y - inset) / abs(offset.y))
+    tip = half + offset * min(limits)
+
+    direction = offset.normalize()
+    side = pygame.Vector2(-direction.y, direction.x) * half_width
+    tip += direction * bob
+    base = tip - direction * length
+    points = [tip, base + side, base - side]
+
+    pygame.draw.polygon(surface, color, points)
+    pygame.draw.polygon(surface, (0, 0, 0), points, width=2)

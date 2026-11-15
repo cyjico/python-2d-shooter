@@ -23,3 +23,5 @@ class EnemyDirector:
     """Enemies of the current wave still waiting to spawn."""
     just_cleared: bool = False
     """True during the break right after a wave was cleared (not before wave I)."""
+    held: bool = False
+    """Stops the break's countdown (e.g. while the player picks a perk)."""

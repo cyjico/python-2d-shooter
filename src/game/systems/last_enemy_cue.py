@@ -8,6 +8,7 @@ from game.components.transform import Transform
 from game.core_ecs.world import World
 from game.resources.camera import Camera
 from game.resources.enemy_director import EnemyDirector, WavePhase
+from game.util.draw import draw_edge_arrow
 
 COLOR = (255, 90, 90)
 PULSE_SPEED = 6.0
@@ -49,7 +50,15 @@ def last_enemy_cue_render_system(world: World, surface: pygame.Surface):
     ):
         _draw_ring(surface, screen_pos, radius, pulse)
     else:
-        _draw_edge_arrow(surface, screen_pos, camera, pulse)
+        draw_edge_arrow(
+            surface,
+            screen_pos,
+            COLOR,
+            EDGE_INSET,
+            ARROW_LENGTH,
+            ARROW_HALF_WIDTH,
+            bob=4 * pulse,
+        )
 
 
 def _draw_ring(
@@ -63,30 +72,3 @@ def _draw_ring(
         ring, (*COLOR, alpha), (size // 2, size // 2), ring_radius, width=3
     )
     surface.blit(ring, ring.get_rect(center=(round(center.x), round(center.y))))
-
-
-def _draw_edge_arrow(
-    surface: pygame.Surface, target: pygame.Vector2, camera: Camera, pulse: float
-):
-    half = camera.viewport_size / 2
-    offset = target - half
-    if offset.length_squared() == 0:
-        return
-
-    # Scale the offset down until it touches the inset screen border.
-    limits = []
-    if offset.x:
-        limits.append((half.x - EDGE_INSET) / abs(offset.x))
-    if offset.y:
-        limits.append((half.y - EDGE_INSET) / abs(offset.y))
-    tip = half + offset * min(limits)
-
-    direction = offset.normalize()
-    side = pygame.Vector2(-direction.y, direction.x) * ARROW_HALF_WIDTH
-    # Bobs toward the enemy.
-    tip += direction * 4 * pulse
-    base = tip - direction * ARROW_LENGTH
-    points = [tip, base + side, base - side]
-
-    pygame.draw.polygon(surface, COLOR, points)
-    pygame.draw.polygon(surface, (0, 0, 0), points, width=2)

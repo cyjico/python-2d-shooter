@@ -17,6 +17,7 @@ from game.resources.camera import Camera
 from game.resources.event_bus import EventBus
 from game.util.factions import team_of
 from game.util.geometry import regular_polygon, rot_to_vec2
+from game.util.ownership import owner_of
 from game.util.rng import resolve_rng
 
 
@@ -52,7 +53,8 @@ def spark_spawn_system(world: World, rng: random.Random | None = None):
     rng = resolve_rng(rng)
 
     for hit in world.get_resource(EventBus).read(ProjectileHitEvent):
-        if not world.has_component(hit.shooter, Player):
+        # Drones count: their sparks are the player's too.
+        if not world.has_component(owner_of(world, hit.shooter), Player):
             continue
 
         back = -hit.direction

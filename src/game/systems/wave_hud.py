@@ -41,7 +41,11 @@ def wave_hud_system(world: World):
         corner = f"starts in {seconds}"
         corner_color = REMAINING_COLOR
         banner = f"WAVE {to_roman(wave)}"
-        if director.just_cleared:
+        if director.held:
+            corner = "pick a perk"
+            sub = f"Wave {to_roman(director.wave)} cleared - choose a perk"
+            sub_color = CLEARED_COLOR
+        elif director.just_cleared:
             sub = f"Wave {to_roman(director.wave)} cleared - next in {seconds}"
             sub_color = CLEARED_COLOR
         else:

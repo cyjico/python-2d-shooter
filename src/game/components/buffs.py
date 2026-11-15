@@ -14,11 +14,57 @@ class Stat(Enum):
     """Used with `bonuses`: extra stamina bars."""
     STAMINA_REGEN = auto()
 
+    # Mostly from perks (see `constants.perks`).
+    MAX_HEALTH = auto()
+    """Bonus: extra max health. Applied once, when the perk is picked."""
+    HEALTH_REGEN = auto()
+    """Bonus: health regained per second."""
+    LIFESTEAL = auto()
+    """Bonus: fraction of damage dealt to enemies that heals the dealer."""
+    DAMAGE_TAKEN = auto()
+    """Multiplier on incoming damage."""
+    CRIT_CHANCE = auto()
+    """Bonus: added to every gun's crit chance."""
+    CRIT_DAMAGE = auto()
+    """Bonus: added to every gun's crit multiplier."""
+    PIERCE = auto()
+    """Bonus: extra targets each bullet passes through."""
+    FIRE_RATE = auto()
+    RELOAD_SPEED = auto()
+    EXTRA_PROJECTILES = auto()
+    """Bonus: extra bullets fanned out around every shot."""
+    AMMO_ON_KILL = auto()
+    """Bonus: rounds put back into the magazine per kill."""
+    DASH_HEAL = auto()
+    """Bonus: health regained per dash."""
+    DRONES = auto()
+    """Bonus: drones orbiting the entity."""
+    DRONE_FIRE_RATE = auto()
+    DRONE_DAMAGE = auto()
+    DRONE_PIERCE = auto()
+    """Bonus: extra targets each drone bullet passes through."""
+    DRONE_REGEN = auto()
+    """Bonus: health regained per second, per drone."""
+
 
 class Flag(Enum):
-    """Yes/no effects a buff can grant."""
+    """Yes/no effects a buff or perk can grant."""
 
     IMMUNE = auto()
+    DASH_IMMUNE = auto()
+    """No damage while dashing."""
+    DASH_STRIKE = auto()
+    """Dashing into an enemy damages it."""
+    DASH_RELOAD = auto()
+    """Starting a dash finishes the gun's reload instantly."""
+    CARNAGE = auto()
+    """Enemies this entity kills explode, damaging enemies around them."""
+    UNDYING = auto()
+    """Once per wave, a killing blow leaves 1 health instead."""
+    BERSERK = auto()
+    """More damage the lower this entity's health."""
+    DRONE_SPREAD = auto()
+    """Drones fire three bullets at once."""
 
 
 @dataclass(frozen=True, slots=True)

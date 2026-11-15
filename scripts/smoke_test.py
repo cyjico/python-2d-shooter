@@ -26,12 +26,31 @@ from game.constants.enemy_spawning import (
     EASY_ENEMY,
     SPAWN_MARGIN_MAX,
     SPAWN_MARGIN_MIN,
+    WAVE_CLEAR_HEAL,
     max_alive,
     special_count,
     wave_roster,
     wave_scaling,
     wave_size,
 )
+from game.components.drone import Drone
+from game.constants.rewards import HIT_CASH, KILL_HEAL
+from game.components.ai.charger import ChargerAI, ChargerAIState
+from game.components.power_up import PowerUp, PowerUpKind
+from game.systems.charger_warning import charger_lane_render_system
+from game.systems.power_ups import spawn_power_up
+from game.components.perks import PerkPath, Perks
+from game.constants.perks import (
+    FILLERS,
+    FUSIONS,
+    OFFER_SIZE,
+    PATH_PERKS,
+    next_path_perk,
+    perk_candidates,
+    roll_offer,
+)
+from game.resources.perk_draft import PerkDraft
+from game.util.perks import apply_perk
 from game.constants.gun_buffs import buffed_spec
 from game.constants.guns import ALL_GUNS
 from game.components.particle import Particle, Spark
@@ -278,16 +297,19 @@ before = wallet.balance
 earned_before = wallet.total_earned
 kills_before = world.get_resource(RunStats).enemies_killed
 gibs_before = sum(1 for _ in world.query(Particle))
+hp_before = world.get_component(game.player, Health).current = 50
 bounty = kill_charger()
-assert wallet.balance == before + bounty, wallet.balance
-assert wallet.total_earned == earned_before + bounty
+# The killing hit also pays HIT_CASH, and the kill heals.
+assert wallet.balance == before + bounty + HIT_CASH, wallet.balance
+assert wallet.total_earned == earned_before + bounty + HIT_CASH
+assert world.get_component(game.player, Health).current == hp_before + KILL_HEAL
 assert world.get_resource(RunStats).enemies_killed == kills_before + 1
 assert sum(1 for _ in world.query(Particle)) - gibs_before >= 6, "enemy gibs"
 
 grant_buff(world, game.player, MONEY_BOOSTS[Rarity.RARE])
 before = wallet.balance
 bounty = kill_charger()
-assert wallet.balance == before + round(bounty * 1.75), wallet.balance
+assert wallet.balance == before + round(bounty * 1.75) + round(HIT_CASH * 1.75)
 
 # Dashing spends stamina and stops when it runs out.
 stamina = world.get_component(game.player, Stamina)
@@ -437,6 +459,8 @@ director.timer = 0.0
 run_waves()
 assert director.phase is WavePhase.ACTIVE and director.wave == 1
 assert world.get_resource(RunStats).wave == 1
+player_health = world.get_component(game.player, Health)
+player_health.current = 10
 spawned = 0
 for _ in range(60 * 60):
     for e in enemies():
@@ -448,6 +472,9 @@ for _ in range(60 * 60):
     run_waves()
 assert spawned == wave_size(1), spawned
 assert director.just_cleared and banner_label.text == "WAVE II"
+# Clearing it gave back part of the player's health.
+assert math.isclose(player_health.current, 10 + player_health.maximum * WAVE_CLEAR_HEAL)
+player_health.current = player_health.maximum
 
 # Wave II: bigger, stronger, and the last enemy gets called out.
 director.timer = 0.0
@@ -524,6 +551,81 @@ assert not camera.is_circle_visible(pos, SPAWN_MARGIN_MIN - 1)
 assert camera.is_circle_visible(pos, SPAWN_MARGIN_MAX)
 assert world.get_component(lost, OffscreenDespawn).offscreen_time == 0.0
 world.destroy_entity(lost)
+
+# Perks: a path's Nth pick is its N-star perk; two paths at 3 stars unlock a
+# fusion; with nothing left, the offer is topped up with fillers.
+perk_rng = random.Random(5)
+fresh = Perks()
+first_offer = roll_offer(fresh, perk_rng)
+assert len({p.id for p in first_offer}) == OFFER_SIZE
+assert all(p.stars == 1 and p.path is not None for p in first_offer)
+for perk in PATH_PERKS[PerkPath.STRENGTH][:3] + PATH_PERKS[PerkPath.TECH][:3]:
+    fresh.add(perk)
+assert fresh.stars(PerkPath.STRENGTH) == 3
+candidate_ids = {p.id for p in perk_candidates(fresh)}
+assert "fus_gunship" in candidate_ids and "fus_berserker" not in candidate_ids
+assert next_path_perk(fresh, PerkPath.STRENGTH).stars == 4
+maxed = Perks(owned=[p for ps in PATH_PERKS.values() for p in ps] + FUSIONS)
+assert roll_offer(maxed, perk_rng) == FILLERS[:OFFER_SIZE]
+
+# A cleared wave opens the pick: the countdown holds until a number key picks.
+director.wave, director.phase, director.just_cleared = 4, WavePhase.BREAK, True
+director.timer = 8.0
+step()
+draft = world.get_resource(PerkDraft)
+assert draft.is_open and director.held and len(draft.offer) == OFFER_SIZE
+assert world.get_resource(UIState).blocks_gameplay_input
+held_at = director.timer
+step(10)
+assert director.timer == held_at
+chosen = draft.offer[2]
+press(pygame.K_3)
+player_perks = world.get_component(game.player, Perks)
+assert chosen in player_perks.owned or not chosen.permanent
+assert not draft.is_open and not director.held
+assert not world.get_resource(UIState).blocks_gameplay_input
+world.add_resource(EnemyDirector(timer=math.inf))
+director = world.get_resource(EnemyDirector)
+
+# Drones follow the Tech path's count and orbit the player.
+player_perks.owned = []
+apply_perk(world, game.player, PATH_PERKS[PerkPath.TECH][0])
+apply_perk(world, game.player, PATH_PERKS[PerkPath.TECH][1])
+step()
+assert len(list(world.query(Drone))) == 2
+player_perks.owned = []
+step()
+assert not list(world.query(Drone))
+
+# R reloads too (right click still does).
+held_gun = world.get_component(game.player, Loadout).equipped
+held_gun.magazine = 1
+press(pygame.K_r)
+assert held_gun.reloading
+step(120)
+assert held_gun.magazine == held_gun.spec.magazine_size
+
+# Power-ups: walking over one uses it.
+player_pos = world.get_component(game.player, Transform).position
+player_hp = world.get_component(game.player, Health)
+player_hp.current = 10
+spawn_power_up(world, PowerUpKind.MED_KIT, player_pos)
+step()
+assert player_hp.current > 10 and not list(world.query(PowerUp))
+held_gun.magazine = held_gun.reserve = 0
+spawn_power_up(world, PowerUpKind.MAX_AMMO, player_pos)
+step()
+assert held_gun.reserve == held_gun.spec.max_reserve
+
+# A charger winding up shows its lane; a nuke kills it anyway.
+nuked = spawn_charger(world, player_pos + pygame.Vector2(-150, 0), game.player)
+world.get_component(nuked, ChargerAI).timer = 0.0
+step(5)
+assert world.get_component(nuked, ChargerAI).state is ChargerAIState.WINDUP
+charger_lane_render_system(world, game.screen)
+spawn_power_up(world, PowerUpKind.NUKE, player_pos)
+step()
+assert not world.is_alive(nuked)
 
 step(60)
 

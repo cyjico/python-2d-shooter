@@ -7,6 +7,8 @@ from game.resources.input_state import InputState
 
 SLOT_KEYS = {pygame.K_1: 0, pygame.K_2: 1}
 """Number key -> loadout slot index."""
+NUMBER_KEYS = {key: i for i, key in enumerate(range(pygame.K_1, pygame.K_9 + 1))}
+"""Number key -> menu choice index."""
 
 
 def input_system(world: World, events: Iterable[pygame.event.Event]):
@@ -29,7 +31,7 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
     # Transitions come from events so a press+release between polls isn't lost
     pressed = released = reload = interact = reroll = cancel = dash_pressed = False
     switch = 0
-    slot = None
+    slot = number = None
     for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pressed = True
@@ -42,12 +44,15 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
                 switch += 1
             elif event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_SPACE):
                 dash_pressed = True
-            elif event.key in SLOT_KEYS:
-                slot = SLOT_KEYS[event.key]
+            elif event.key in NUMBER_KEYS:
+                number = NUMBER_KEYS[event.key]
+                slot = SLOT_KEYS.get(event.key, slot)
             elif event.key == pygame.K_e:
                 interact = True
             elif event.key == pygame.K_r:
-                reroll = True
+                # Menus read it as reroll; gameplay input is blocked while one
+                # is open, so it only reloads outside them.
+                reroll = reload = True
             elif event.key == pygame.K_q:
                 cancel = True
         elif event.type == pygame.MOUSEWHEEL:
@@ -59,6 +64,7 @@ def input_system(world: World, events: Iterable[pygame.event.Event]):
     inputs.reload_pressed = reload
     inputs.weapon_switch = (switch > 0) - (switch < 0)
     inputs.slot_pressed = slot
+    inputs.number_pressed = number
     inputs.interact_pressed = interact
     inputs.reroll_pressed = reroll
     inputs.cancel_pressed = cancel

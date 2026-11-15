@@ -8,6 +8,7 @@ from game.components.lifetime import Lifetime
 from game.components.player import Player
 from game.components.shape import Shape
 from game.components.transform import Transform
+from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.events.combat import DamageTakenEvent
 from game.resources.asset_store import AssetStore
@@ -16,6 +17,7 @@ from game.resources.event_bus import EventBus
 
 NORMAL_COLOR = (255, 255, 255)
 PLAYER_HURT_COLOR = (255, 90, 90)
+HEAL_COLOR = (110, 230, 110)
 CRIT_COLOR = (255, 200, 40)
 SHADOW_COLOR = (0, 0, 0)
 
@@ -61,29 +63,41 @@ def damage_number_spawn_system(world: World):
     events = world.get_resource(EventBus)
 
     for taken in events.read(DamageTakenEvent):
-        transform = world.try_get_component(taken.target, Transform)
-        if transform is None:
-            continue
-
-        shape = world.try_get_component(taken.target, Shape)
-        top = 0.0 if shape is None else shape.radius * transform.max_scale
-
         text, color, size = _style(world, taken)
-        position = transform.position + pygame.Vector2(
-            random.uniform(-SPAWN_JITTER, SPAWN_JITTER), -(top + SPAWN_HEIGHT)
-        )
+        spawn_floating_number(world, taken.target, text, color, size, taken.critical)
 
-        world.create_entity(
-            Transform(position=position),
-            DamageNumber(text, color, size, taken.critical),
-            Lifetime(CRIT_LIFETIME if taken.critical else NORMAL_LIFETIME),
-            Drift(
-                velocity=pygame.Vector2(
-                    random.uniform(-DRIFT_SPEED, DRIFT_SPEED), -RISE_SPEED
-                ),
-                drag=SLOWDOWN,
+
+def spawn_floating_number(
+    world: World,
+    target: Entity,
+    text: str,
+    color: tuple[int, int, int],
+    size: int = NORMAL_SIZE,
+    critical: bool = False,
+):
+    """A number that rises from above `target` and fades (damage, healing)."""
+    transform = world.try_get_component(target, Transform)
+    if transform is None:
+        return
+
+    shape = world.try_get_component(target, Shape)
+    top = 0.0 if shape is None else shape.radius * transform.max_scale
+
+    position = transform.position + pygame.Vector2(
+        random.uniform(-SPAWN_JITTER, SPAWN_JITTER), -(top + SPAWN_HEIGHT)
+    )
+
+    world.create_entity(
+        Transform(position=position),
+        DamageNumber(text, color, size, critical),
+        Lifetime(CRIT_LIFETIME if critical else NORMAL_LIFETIME),
+        Drift(
+            velocity=pygame.Vector2(
+                random.uniform(-DRIFT_SPEED, DRIFT_SPEED), -RISE_SPEED
             ),
-        )
+            drag=SLOWDOWN,
+        ),
+    )
 
 
 def _pop_scale(number: DamageNumber, age: float):

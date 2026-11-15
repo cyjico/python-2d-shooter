@@ -5,10 +5,12 @@ from game.components.buffs import Stat
 from game.components.loadout import FireMode, Gun, Loadout
 from game.components.transform import Transform
 from game.components.weapon_intent import WeaponIntent
+from game.constants.perks import EXTRA_PROJECTILE_SPREAD
 from game.core_ecs.entity import Entity
 from game.core_ecs.world import World
 from game.prefabs.gun_projectile import spawn_gun_projectile
-from game.util.buffs import stat_multiplier
+from game.util.buffs import stat_bonus, stat_multiplier
+from game.util.perks import berserk_multiplier
 
 
 def weapon_system(world: World, dt: float):
@@ -29,10 +31,14 @@ def weapon_system(world: World, dt: float):
             continue
 
         if weapon.reloading:
-            weapon.reload_remaining -= dt
+            # Counts down faster instead of starting shorter, so the reload
+            # ring still goes from empty to full.
+            weapon.reload_remaining -= dt * stat_multiplier(
+                world, entity, Stat.RELOAD_SPEED
+            )
 
             if weapon.reload_remaining <= 0:
-                _finish_reload(weapon)
+                finish_reload(weapon)
 
             # No shooting mid-reload.
             continue
@@ -54,11 +60,21 @@ def _start_reload(gun: Gun):
     gun.reload_remaining = gun.spec.reload_time
 
 
-def _finish_reload(gun: Gun):
+def finish_reload(gun: Gun):
+    """Moves ammo from the reserve into the magazine, ending any reload."""
     gun.reload_remaining = 0.0
     taken = min(gun.spec.magazine_size - gun.magazine, gun.reserve)
     gun.magazine += taken
     gun.reserve -= taken
+
+
+def _fan_offsets(count: int):
+    """Angles, in degrees, of `count` extra bullets: alternating sides,
+    widening (+10, -10, +20, -20, ...)."""
+    return [
+        EXTRA_PROJECTILE_SPREAD * (i // 2 + 1) * (1 if i % 2 == 0 else -1)
+        for i in range(count)
+    ]
 
 
 def _fire(
@@ -66,21 +82,55 @@ def _fire(
 ):
     spec = gun.spec
     gun.magazine -= 1
-    gun.cooldown = 1.0 / spec.fire_rate
+    fire_rate = (
+        spec.fire_rate
+        * loadout.fire_rate_scale
+        * stat_multiplier(world, shooter, Stat.FIRE_RATE)
+    )
+    gun.cooldown = 1.0 / fire_rate
 
     origin = transform.apply(loadout.muzzle)
-    damage_scale = loadout.damage_scale * stat_multiplier(world, shooter, Stat.DAMAGE)
-    for _ in range(spec.pellets):
-        deviation = math.radians(random.uniform(-spec.spread, spec.spread))
+    damage_scale = (
+        loadout.damage_scale
+        * stat_multiplier(world, shooter, Stat.DAMAGE)
+        * berserk_multiplier(world, shooter)
+    )
+    pierce = (
+        spec.pierce
+        + loadout.pierce_bonus
+        + round(stat_bonus(world, shooter, Stat.PIERCE))
+    )
+    crit_chance = min(
+        1.0, spec.crit_chance + stat_bonus(world, shooter, Stat.CRIT_CHANCE)
+    )
+    crit_multiplier = spec.crit_multiplier + stat_bonus(
+        world, shooter, Stat.CRIT_DAMAGE
+    )
+
+    def shoot(angle: float):
         spawn_gun_projectile(
             world,
             shooter,
             origin,
-            transform.rotation + deviation,
+            angle,
             spec,
             damage_scale,
             loadout.knockback_scale,
+            pierce=pierce,
+            crit_chance=crit_chance,
+            crit_multiplier=crit_multiplier,
         )
+
+    for _ in range(spec.pellets):
+        deviation = math.radians(random.uniform(-spec.spread, spec.spread))
+        shoot(transform.rotation + deviation)
+
+    # Extra bullets (Bullet Hell, drone spread): one each, fanned out.
+    extra = loadout.extra_projectiles + round(
+        stat_bonus(world, shooter, Stat.EXTRA_PROJECTILES)
+    )
+    for offset in _fan_offsets(extra):
+        shoot(transform.rotation + math.radians(offset))
 
     # Auto-reload when the magazine runs dry.
     if gun.magazine == 0 and gun.can_reload:

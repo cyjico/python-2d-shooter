@@ -1,15 +1,20 @@
 import pygame
 
 from game.components.breakable import Breakable
+from game.components.buffs import Flag, Stat
 from game.components.dash import Dash, DashIntent
+from game.components.health import Health
 from game.components.mover import Mover
 from game.components.rigid_body import RigidBody
 from game.components.stamina import Stamina
 from game.components.transform import Transform
+from game.constants.perks import DASH_STRIKE_DAMAGE
 from game.core_ecs.world import World
 from game.events.collision import CollisionEvent, directed
-from game.events.combat import DamageEvent
+from game.events.combat import DamageEvent, DashStartedEvent
 from game.resources.event_bus import EventBus
+from game.util.buffs import has_flag, stat_multiplier
+from game.util.factions import is_hostile
 from game.util.geometry import rot_to_vec2
 
 
@@ -30,6 +35,8 @@ def _dash_direction(
 
 def dash_system(world: World, dt: float):
     """Starts and drives dashes for anything with Dash + DashIntent."""
+    events = world.get_resource(EventBus)
+
     for entity, (dash, intent, rigidbody, transform) in world.query(
         Dash, DashIntent, RigidBody, Transform
     ):
@@ -52,6 +59,7 @@ def dash_system(world: World, dt: float):
                 dash.time_left = dash.duration
                 dash.cooldown_left = dash.cooldown
                 dash.hit.clear()
+                events.emit(DashStartedEvent(entity))
 
         if dash.active:
             dash.moving = True
@@ -62,15 +70,23 @@ def dash_system(world: World, dt: float):
 
 
 def dash_impact_system(world: World):
-    """A dash damages each Breakable it runs into, once."""
+    """A dash damages each Breakable it runs into, once. With Tempest, it
+    damages enemies too."""
     events = world.get_resource(EventBus)
 
     for me, other in directed(events.read(CollisionEvent)):
         dash = world.try_get_component(me, Dash)
         if dash is None or not dash.moving or other in dash.hit:
             continue
-        if not world.has_component(other, Breakable):
-            continue
 
-        dash.hit.add(other)
-        events.emit(DamageEvent(other, dash.impact_damage, me))
+        if world.has_component(other, Breakable):
+            dash.hit.add(other)
+            events.emit(DamageEvent(other, dash.impact_damage, me))
+        elif (
+            world.has_component(other, Health)
+            and is_hostile(world, me, other)
+            and has_flag(world, me, Flag.DASH_STRIKE)
+        ):
+            dash.hit.add(other)
+            damage = DASH_STRIKE_DAMAGE * stat_multiplier(world, me, Stat.DAMAGE)
+            events.emit(DamageEvent(other, damage, me))

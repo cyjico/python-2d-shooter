@@ -39,6 +39,18 @@ class ScreenUI:
 
 
 @dataclass(slots=True)
+class PerkDraftUI:
+    """Marks UI elements of the perk pick menu, destroyed when it changes."""
+
+
+@dataclass(slots=True)
+class PerkHudRow:
+    """Marks a UILabel listing one perk path's stars (or a fusion), top left."""
+
+    index: int
+
+
+@dataclass(slots=True)
 class WaveLabel:
     """Marks a UILabel that shows the wave number in roman numerals."""
 

@@ -15,6 +15,7 @@ from game.components.hud import (
     InteractPromptLabel,
     InventorySlotUI,
     MoneyLabel,
+    PerkHudRow,
     WaveBannerLabel,
     WaveBannerSubLabel,
     WaveLabel,
@@ -23,6 +24,7 @@ from game.components.hud import (
 )
 from game.components.loadout import Gun, Loadout
 from game.components.mover import Mover
+from game.components.perks import Perks
 from game.components.player import Player
 from game.components.relocatable import Relocatable
 from game.components.rigid_body import RigidBody, inertia_of_box
@@ -47,10 +49,13 @@ from game.prefabs.crate import spawn_crate
 from game.prefabs.mystery_box import spawn_mystery_box
 from game.resources.asset_store import AssetStore
 from game.resources.camera import Camera
+from game.resources.deferred_damage import DeferredDamage
 from game.resources.enemy_director import EnemyDirector
 from game.resources.event_bus import EventBus
 from game.resources.input_state import InputState
 from game.resources.mystery_box_session import MysteryBoxSession
+from game.resources.perk_draft import PerkDraft
+from game.resources.power_up_drops import PowerUpDrops
 from game.resources.run_stats import RunStats
 from game.resources.ui_state import UIState
 from game.screens import PLAY_ACTION, build_game_over, build_main_menu
@@ -64,6 +69,10 @@ from game.systems.breakable import break_cleanup_system, breakable_system
 from game.systems.buff import buff_drop_system, buff_tick_system
 from game.systems.buff_hud import buff_hud_system
 from game.systems.camera_follow import camera_follow_system
+from game.systems.charger_warning import (
+    charger_edge_warning_render_system,
+    charger_lane_render_system,
+)
 from game.systems.collision import collision_system
 from game.systems.contact_damage import contact_damage_system
 from game.systems.cursor import cursor_render_system
@@ -79,6 +88,7 @@ from game.systems.death_sequence import (
     start_death_sequence,
 )
 from game.systems.drift import drift_system
+from game.systems.drone import drone_follow_system, drone_system
 from game.systems.enemy_spawn import enemy_spawn_system
 from game.systems.health import death_cleanup_system, health_system
 from game.systems.health_bars import health_bar_render_system
@@ -93,10 +103,25 @@ from game.systems.mystery_box import (
     mystery_box_system,
 )
 from game.systems.offscreen_despawn import offscreen_despawn_system
+from game.systems.perk_draft import close_draft, perk_draft_system
+from game.systems.perk_hud import HUD_ROWS, perk_hud_system
+from game.systems.perks import (
+    deferred_damage_system,
+    perk_dash_system,
+    perk_kill_system,
+    perk_upkeep_system,
+    shockwave_render_system,
+)
 from game.systems.physics import physics_system
 from game.systems.player_control import player_control_system
 from game.systems.player_dash_input import player_dash_input_system
 from game.systems.player_weapon_input import player_weapon_input_system
+from game.systems.power_ups import (
+    power_up_drop_system,
+    power_up_pickup_system,
+    power_up_render_system,
+    screen_flash_render_system,
+)
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
 from game.systems.spawner import spawner_system
@@ -186,6 +211,9 @@ class Game:
         self.world = self._new_world()
         self.world.add_resource(MysteryBoxSession())
         self.world.add_resource(RunStats())
+        self.world.add_resource(PerkDraft())
+        self.world.add_resource(DeferredDamage())
+        self.world.add_resource(PowerUpDrops())
 
         # --- Entities ---
         player_verts = (
@@ -203,6 +231,7 @@ class Game:
             Loadout(slots=[Gun.full(PISTOL)]),
             WeaponIntent(),
             Wallet(balance=800),
+            Perks(),
             Mover(),
             Dash(),
             DashIntent(),
@@ -278,6 +307,18 @@ class Game:
             UILabel("", 28, (230, 180, 50)),
             MoneyLabel(),
         )
+        # Perk paths' stars and fusions, under the money.
+        for index in range(HUD_ROWS):
+            self.world.create_entity(
+                UIRect(
+                    anchor=(0, 0),
+                    pivot=(0, 0),
+                    offset=(16, 48 + index * 19),
+                    size=(180, 18),
+                ),
+                UILabel("", 16, align_left=True),
+                PerkHudRow(index),
+            )
         self.world.create_entity(
             UIRect(anchor=(0.5, 1), pivot=(0.5, 1), offset=(0, -20), size=(500, 24)),
             UILabel(""),
@@ -361,8 +402,9 @@ class Game:
 
     def _begin_death(self):
         assert self.player is not None
-        # Closes an open mystery box menu, which also hands input back.
+        # Closes open menus, which also hands input back.
         close_session(self.world)
+        close_draft(self.world)
         start_death_sequence(self.world, self.player)
         self._set_state(GameState.DYING)
 
@@ -384,6 +426,7 @@ class Game:
     def _upkeep_phase(self, dt: float):
         """Timers and spawning."""
         buff_tick_system(self.world, dt)
+        perk_upkeep_system(self.world, dt)
         # Reads buffs, so after the tick.
         stamina_system(self.world, dt)
         spawner_system(self.world, dt)
@@ -396,8 +439,10 @@ class Game:
         # Aiming converts the mouse through the camera.
         camera_follow_system(self.world, dt)
 
-        # Before the player's intents: opening the menu blocks gameplay input
-        # on this same frame.
+        # Before the player's intents: opening a menu blocks gameplay input
+        # on this same frame. The perk pick goes first so the box can't open
+        # on the frame it does.
+        perk_draft_system(self.world)
         mystery_box_system(self.world, dt)
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
@@ -411,12 +456,15 @@ class Game:
         random_dash_ai_system(self.world, dt)
         # Overrides the facing the movement AIs just set, to aim.
         shooter_ai_system(self.world, dt)
+        drone_system(self.world, dt)
 
     def _action_phase(self, dt: float):
         """Intents become velocity changes and shots."""
         mover_system(self.world, dt)
         # An active dash overrides mover_system.
         dash_system(self.world, dt)
+        # Reads the DashStartedEvents just emitted.
+        perk_dash_system(self.world)
         weapon_system(self.world, dt)
 
     def _physics_phase(self, dt: float):
@@ -424,10 +472,16 @@ class Game:
         collision_system(self.world)
         # Effects that skip physics.
         drift_system(self.world, dt)
+        # Drones keep up with where their owner moved.
+        drone_follow_system(self.world)
 
     def _hit_phase(self, dt: float):
         """Collision results become DamageEvents."""
+        # Last frame's explosions.
+        deferred_damage_system(self.world)
         dash_impact_system(self.world)
+        # A nuke's deaths go out here, before the damage phase reads deaths.
+        power_up_pickup_system(self.world)
         charger_ai_collision_system(self.world)
         contact_damage_system(self.world, dt)
         projectile_system(self.world)
@@ -441,6 +495,9 @@ class Game:
         damage_number_spawn_system(self.world)
         bounty_system(self.world)
         run_stats_system(self.world)
+        perk_kill_system(self.world)
+        # Reads the dead enemy's position, so before cleanup.
+        power_up_drop_system(self.world)
         # Reads the dead enemy's shape, so before cleanup.
         gib_spawn_system(self.world)
         split_on_death_system(self.world)
@@ -461,6 +518,7 @@ class Game:
         inventory_hud_system(self.world)
         buff_hud_system(self.world)
         wave_hud_system(self.world)
+        perk_hud_system(self.world)
 
         # UI created this frame needs its rect before rendering on the next frame.
         ui_layout_system(self.world)
@@ -474,13 +532,19 @@ class Game:
         self.screen.fill(self.settings.background_color)
 
         if self.state is not GameState.MENU:
+            # Under the shapes, so walls and bodies sit on top of the lane.
+            charger_lane_render_system(self.world, self.screen)
             render_system(self.world, self.screen)
+            power_up_render_system(self.world, self.screen)
             spark_render_system(self.world, self.screen)
+            shockwave_render_system(self.world, self.screen)
             mystery_box_price_render_system(self.world, self.screen)
             health_bar_render_system(self.world, self.screen)
             last_enemy_cue_render_system(self.world, self.screen)
             stamina_dots_render_system(self.world, self.screen)
             damage_number_render_system(self.world, self.screen)
+            charger_edge_warning_render_system(self.world, self.screen)
+            screen_flash_render_system(self.world, self.screen)
 
         ui_render_system(self.world, self.screen)
 

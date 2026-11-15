@@ -69,7 +69,10 @@ def _draw_label(
     """Text centered in `rect`, followed by the label's stars if it has any."""
     text = assets.text(label.text, label.size, label.color)
     if label.stars <= 0:
-        surface.blit(text, text.get_rect(center=rect.center))
+        if label.align_left:
+            surface.blit(text, text.get_rect(midleft=rect.midleft))
+        else:
+            surface.blit(text, text.get_rect(center=rect.center))
         return
 
     radius = max(3.0, label.size * STAR_SCALE)
@@ -77,7 +80,7 @@ def _draw_label(
     gap = STAR_TEXT_GAP if label.text else 0
     total = text.get_width() + gap + stars_width
 
-    left = rect.centerx - total / 2
+    left = rect.left if label.align_left else rect.centerx - total / 2
     surface.blit(text, text.get_rect(midleft=(round(left), rect.centery)))
     draw_stars(
         surface,

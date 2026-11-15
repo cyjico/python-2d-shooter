@@ -45,3 +45,8 @@ class ProjectileHitEvent:
 class BrokenEvent:
     entity: Entity
     breaker: Entity
+
+
+@dataclass(slots=True)
+class DashStartedEvent:
+    entity: Entity

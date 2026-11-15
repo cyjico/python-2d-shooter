@@ -33,6 +33,8 @@ FIRST_BREAK_TIME = 2.0
 """Seconds before wave I, long enough to read its banner."""
 BREAK_TIME = 8.0
 """Seconds between clearing a wave and the next one starting."""
+WAVE_CLEAR_HEAL = 0.3
+"""Fraction of max health the player gets back for clearing a wave."""
 OPENING_SPAWNS = 2
 """Enemies spawned the moment a wave starts. The rest trickle in."""
 
