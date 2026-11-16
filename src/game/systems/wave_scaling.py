@@ -13,13 +13,17 @@ from game.core_ecs.world import World
 from game.resources.enemy_director import EnemyDirector
 
 
-def wave_scaling_system(world: World):
+def wave_scaling_system(world: World, wave: int | None = None):
     """Makes new enemies as strong as the current wave, once each.
 
     A system rather than part of the prefabs, so offspring spawned mid-wave
     (splitters) are caught too, on the frame after they appear.
+
+    `wave`: scale to this wave instead of the EnemyDirector's (e.g. the
+    sandbox's level).
     """
-    wave = world.get_resource(EnemyDirector).wave
+    if wave is None:
+        wave = world.get_resource(EnemyDirector).wave
     if wave < 1:
         return
 

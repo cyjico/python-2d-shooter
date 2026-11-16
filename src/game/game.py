@@ -57,8 +57,15 @@ from game.resources.mystery_box_session import MysteryBoxSession
 from game.resources.perk_draft import PerkDraft
 from game.resources.power_up_drops import PowerUpDrops
 from game.resources.run_stats import RunStats
+from game.resources.sandbox import Sandbox
 from game.resources.ui_state import UIState
-from game.screens import PLAY_ACTION, build_game_over, build_main_menu
+from game.screens import (
+    MENU_ACTION,
+    PLAY_ACTION,
+    SANDBOX_ACTION,
+    build_game_over,
+    build_main_menu,
+)
 from game.systems.ai.charger import charger_ai_collision_system, charger_ai_system
 from game.systems.ai.follow_target import follow_target_ai_system
 from game.systems.ai.hover_around_target import hover_around_target_ai_system
@@ -124,6 +131,8 @@ from game.systems.power_ups import (
 )
 from game.systems.projectile import projectile_system
 from game.systems.rendering import render_system
+from game.systems.sandbox import MENU_ACTION as SANDBOX_MENU_ACTION
+from game.systems.sandbox import sandbox_system
 from game.systems.spawner import spawner_system
 from game.systems.split_on_death import split_on_death_system
 from game.systems.stamina import stamina_system
@@ -156,6 +165,13 @@ class GameState(Enum):
     """Run stats and a Play button over the frozen world."""
 
 
+class GameMode(Enum):
+    WAVES = auto()
+    """The real game: endless waves, a perk after each."""
+    SANDBOX = auto()
+    """The map and its crates with no waves; a panel spawns enemies on demand."""
+
+
 class Game:
     def __init__(self, play_intro: bool = True):
         """`play_intro`: show ASRP's intro before the main menu."""
@@ -173,11 +189,9 @@ class Game:
         self.clock = pygame.time.Clock()
 
         # --- Main menu ---
-        self.world = self._new_world()
-        build_main_menu(self.world)
-        ui_layout_system(self.world)
-        self.player = None
-        self.mystery_box = None
+        self.mode = GameMode.WAVES
+        """Of the current run, or the last one."""
+        self._show_main_menu()
 
         self.intro: Intro | None = None
         if play_intro:
@@ -206,8 +220,23 @@ class Game:
         # intro shows no cursor at all.
         pygame.mouse.set_visible(state not in (GameState.PLAYING, GameState.INTRO))
 
-    def start_run(self):
-        """Starts a new run in a fresh world, replacing whatever was there."""
+    def _show_main_menu(self):
+        self.world = self._new_world()
+        build_main_menu(self.world)
+        ui_layout_system(self.world)
+        self.player = None
+        self.mystery_box = None
+        self._set_state(GameState.MENU)
+
+    @property
+    def is_sandbox(self):
+        return self.mode is GameMode.SANDBOX
+
+    def start_run(self, mode: GameMode | None = None):
+        """Starts a new run in a fresh world, replacing whatever was there.
+        `mode` defaults to the last run's."""
+        if mode is not None:
+            self.mode = mode
         self.world = self._new_world()
         self.world.add_resource(MysteryBoxSession())
         self.world.add_resource(RunStats())
@@ -265,28 +294,8 @@ class Game:
             UILabel(""),
             WeaponStatusLabel(),
         )
-        # Wave, stacked above the ammo.
-        self.world.create_entity(
-            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -54), size=(160, 22)),
-            UILabel("", 18),
-            WaveRemainingLabel(),
-        )
-        self.world.create_entity(
-            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -78), size=(160, 34)),
-            UILabel("", 30),
-            WaveLabel(),
-        )
-        # Next-wave banner (during breaks) and last-enemy callout.
-        self.world.create_entity(
-            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), size=(500, 64)),
-            UILabel("", 56),
-            WaveBannerLabel(),
-        )
-        self.world.create_entity(
-            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), offset=(0, 46), size=(500, 28)),
-            UILabel("", 24),
-            WaveBannerSubLabel(),
-        )
+        if not self.is_sandbox:
+            self._create_wave_hud()
 
         # Inventory slots, bottom left, stacked: 1 = primary on top.
         slot_w, slot_h, slot_gap = 190, 36, 6
@@ -334,6 +343,30 @@ class Game:
         ui_layout_system(self.world)
         self._set_state(GameState.PLAYING)
 
+    def _create_wave_hud(self):
+        # Wave, stacked above the ammo.
+        self.world.create_entity(
+            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -54), size=(160, 22)),
+            UILabel("", 18),
+            WaveRemainingLabel(),
+        )
+        self.world.create_entity(
+            UIRect(anchor=(1, 1), pivot=(1, 1), offset=(-16, -78), size=(160, 34)),
+            UILabel("", 30),
+            WaveLabel(),
+        )
+        # Next-wave banner (during breaks) and last-enemy callout.
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), size=(500, 64)),
+            UILabel("", 56),
+            WaveBannerLabel(),
+        )
+        self.world.create_entity(
+            UIRect(anchor=(0.5, 0.3), pivot=(0.5, 0.5), offset=(0, 46), size=(500, 28)),
+            UILabel("", 24),
+            WaveBannerSubLabel(),
+        )
+
     def handle_events(self):
         self.events = pygame.event.get()
         for event in self.events:
@@ -367,9 +400,16 @@ class Game:
         ui_layout_system(self.world)
         ui_interaction_system(self.world)
 
-        clicks = self.world.get_resource(EventBus).read(ButtonClickedEvent)
-        if any(click.action == PLAY_ACTION for click in clicks):
-            self.start_run()
+        events = self.world.get_resource(EventBus)
+        clicks = {click.action for click in events.read(ButtonClickedEvent)}
+        if PLAY_ACTION in clicks:
+            # The main menu's Play is always the real game; game over's
+            # replays the mode that just ended.
+            self.start_run(GameMode.WAVES if self.state is GameState.MENU else None)
+        elif SANDBOX_ACTION in clicks:
+            self.start_run(GameMode.SANDBOX)
+        elif MENU_ACTION in clicks:
+            self._show_main_menu()
 
     def _play_update(self, dt: float):
         self._input_phase()
@@ -381,6 +421,11 @@ class Game:
         self._damage_phase()
         self._cleanup_phase(dt)
         self._hud_phase()
+
+        clicks = self.world.get_resource(EventBus).read(ButtonClickedEvent)
+        if any(click.action == SANDBOX_MENU_ACTION for click in clicks):
+            self._show_main_menu()
+            return
 
         self.world.get_resource(RunStats).time_survived += dt
         if self._player_is_dead():
@@ -430,9 +475,13 @@ class Game:
         # Reads buffs, so after the tick.
         stamina_system(self.world, dt)
         spawner_system(self.world, dt)
-        enemy_spawn_system(self.world, dt)
-        # After spawning, so new enemies are scaled before they ever act.
-        wave_scaling_system(self.world)
+        if self.is_sandbox:
+            sandbox_system(self.world)
+            # After spawning, so new enemies are scaled before they ever act.
+            wave_scaling_system(self.world, self.world.get_resource(Sandbox).level)
+        else:
+            enemy_spawn_system(self.world, dt)
+            wave_scaling_system(self.world)
 
     def _intent_phase(self, dt: float):
         """Players and AI decide what they want to do this frame."""
@@ -442,7 +491,8 @@ class Game:
         # Before the player's intents: opening a menu blocks gameplay input
         # on this same frame. The perk pick goes first so the box can't open
         # on the frame it does.
-        perk_draft_system(self.world)
+        if not self.is_sandbox:
+            perk_draft_system(self.world)
         mystery_box_system(self.world, dt)
         player_control_system(self.world, dt)
         player_weapon_input_system(self.world)
@@ -517,7 +567,8 @@ class Game:
         weapon_status_hud_system(self.world)
         inventory_hud_system(self.world)
         buff_hud_system(self.world)
-        wave_hud_system(self.world)
+        if not self.is_sandbox:
+            wave_hud_system(self.world)
         perk_hud_system(self.world)
 
         # UI created this frame needs its rect before rendering on the next frame.
@@ -540,7 +591,8 @@ class Game:
             shockwave_render_system(self.world, self.screen)
             mystery_box_price_render_system(self.world, self.screen)
             health_bar_render_system(self.world, self.screen)
-            last_enemy_cue_render_system(self.world, self.screen)
+            if not self.is_sandbox:
+                last_enemy_cue_render_system(self.world, self.screen)
             stamina_dots_render_system(self.world, self.screen)
             damage_number_render_system(self.world, self.screen)
             charger_edge_warning_render_system(self.world, self.screen)
@@ -592,8 +644,12 @@ class Game:
             Relocatable(points=box_points, min_distance=MIN_MOVE_DISTANCE),
         )
 
-        # Waves: enemies appear just off screen, more and stronger every wave.
-        self.world.add_resource(EnemyDirector())
+        if self.is_sandbox:
+            # No waves: enemies come from the sandbox panel.
+            self.world.add_resource(Sandbox())
+        else:
+            # Waves: enemies appear just off screen, more and stronger every wave.
+            self.world.add_resource(EnemyDirector())
 
 
 def main():

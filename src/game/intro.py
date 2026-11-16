@@ -268,7 +268,9 @@ def synthesize_samples(rng: np.random.Generator | None = None):
             (2715.0, 0.10, 0.12),
         )
     )
-    thump = 0.6 * np.sin(2 * math.pi * 48.0 * t) * _envelope(t, 0.004, 0.25, IMPACT_TIME)
+    thump = (
+        0.6 * np.sin(2 * math.pi * 48.0 * t) * _envelope(t, 0.004, 0.25, IMPACT_TIME)
+    )
     click = 0.3 * noise * _envelope(t, 0.001, 0.015, IMPACT_TIME)
 
     mix = drone + hiss + 0.35 * clank + thump + click
@@ -298,5 +300,5 @@ def synthesize_sound():
         data = np.repeat(data[:, None], channels, axis=1)
     try:
         return pygame.sndarray.make_sound(np.ascontiguousarray(data))
-    except (pygame.error, ValueError):
+    except pygame.error, ValueError:
         return None

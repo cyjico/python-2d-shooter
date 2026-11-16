@@ -644,7 +644,7 @@ assert any(p.keeps_moving_when_frozen for _, (p,) in world.query(Particle))
 step(60 * 3)
 assert game.state is GameState.GAME_OVER
 
-# Play (below the stats, at the screen's center + 100px) starts a fresh run.
+# Play (below the stats, at the screen's center + ~100px) starts a fresh run.
 old_world = world
 pygame.mouse.get_pos = lambda: (400, 400)
 click(1)
@@ -653,5 +653,97 @@ assert game.world is not old_world
 assert game.world.get_resource(RunStats).enemies_killed == 0
 assert game.world.has_component(game.player, Shape)
 step(30)
+
+# Sandbox: the map with no waves; a panel spawns enemies on demand.
+from game.components.faction import Faction, Team
+from game.components.hud import SandboxUI
+from game.components.invulnerable import Invulnerable
+from game.components.ui import UIButton, UIRect
+from game.resources.sandbox import Sandbox
+from game.systems import sandbox as sandbox_panel
+
+
+def click_at(pos):
+    pygame.mouse.get_pos = lambda: pos
+    click(1)
+
+
+def click_action(action: str):
+    rect = next(
+        ui.rect
+        for _, (ui, button) in game.world.query(UIRect, UIButton)
+        if button.action == action
+    )
+    click_at(rect.center)
+
+
+def enemies_alive():
+    return [e for e, (f,) in game.world.query(Faction) if f.team & Team.ENEMY]
+
+
+sandbox_game = game = Game(play_intro=False)
+click_at((400, 370))  # Sandbox, under Play
+assert game.state is GameState.PLAYING
+step()  # the panel is built on the first frame
+world = game.world
+sandbox = world.get_resource(Sandbox)
+assert world.try_get_resource(EnemyDirector) is None
+assert any(True for _ in world.query(SandboxUI)), "panel should be built"
+step(60 * 5)
+assert not enemies_alive(), "no waves in the sandbox"
+
+click_action(sandbox_panel.SPAWN_ACTION.format("Chaser"))
+assert len(enemies_alive()) == 1
+player_pos = world.get_component(game.player, Transform).position
+for enemy in enemies_alive():
+    distance = world.get_component(enemy, Transform).position.distance_to(player_pos)
+    assert distance < 400, "spawns near the player"
+
+click_action(sandbox_panel.COUNT_ACTION)
+assert sandbox_panel.SPAWN_COUNTS[sandbox.count_index] == 3
+click_action(sandbox_panel.SPAWN_ACTION.format("Shooter"))
+assert len(enemies_alive()) == 4
+
+click_action(sandbox_panel.LEVEL_UP_ACTION)
+click_action(sandbox_panel.LEVEL_UP_ACTION)
+assert sandbox.level == 3
+click_action(sandbox_panel.COUNT_ACTION)  # x5, x10, then back to x1
+click_action(sandbox_panel.COUNT_ACTION)
+click_action(sandbox_panel.COUNT_ACTION)
+assert sandbox_panel.SPAWN_COUNTS[sandbox.count_index] == 1
+before = set(enemies_alive())
+click_action(sandbox_panel.SPAWN_ACTION.format("Charger"))
+step()
+(charger,) = set(enemies_alive()) - before
+assert world.get_component(charger, Health).maximum == 60 * wave_scaling(3).health
+
+click_action(sandbox_panel.GOD_ACTION)
+assert world.has_component(game.player, Invulnerable)
+balance = world.get_component(game.player, Wallet).balance
+click_action(sandbox_panel.CASH_ACTION)
+assert world.get_component(game.player, Wallet).balance == balance + 1000
+
+click_action(sandbox_panel.CLEAR_ACTION)
+assert not enemies_alive()
+assert world.get_resource(RunStats).enemies_killed == 0, "clearing isn't killing"
+
+panel_size = sum(1 for _ in world.query(SandboxUI))
+click_action(sandbox_panel.COLLAPSE_ACTION)
+assert sum(1 for _ in world.query(SandboxUI)) < panel_size
+click_action(sandbox_panel.COLLAPSE_ACTION)
+
+# Dying in the sandbox and pressing Play stays in the sandbox.
+click_action(sandbox_panel.GOD_ACTION)
+world.get_component(game.player, Health).current = 0
+step(60 * 5)
+assert game.state is GameState.GAME_OVER
+click_action("play")
+assert game.state is GameState.PLAYING
+assert game.world.try_get_resource(Sandbox) is not None
+
+# Its Main Menu button leaves it.
+step()
+click_action(sandbox_panel.MENU_ACTION)
+assert game.state is GameState.MENU and game.player is None
 
 print("Smoke test passed")

@@ -31,8 +31,7 @@ def _arc(surface: pygame.Surface, color, center: pygame.Vector2, fraction: float
     steps = max(2, round(ARC_STEPS * fraction))
     for radius in (RING_RADIUS, RING_RADIUS - 1):
         points = [
-            center
-            + pygame.Vector2(math.cos(angle), math.sin(angle)) * radius
+            center + pygame.Vector2(math.cos(angle), math.sin(angle)) * radius
             for i in range(steps + 1)
             # y points down, so increasing angles go clockwise on screen.
             for angle in [-math.pi / 2 + math.tau * fraction * i / steps]

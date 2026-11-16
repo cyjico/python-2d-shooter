@@ -44,6 +44,11 @@ class PerkDraftUI:
 
 
 @dataclass(slots=True)
+class SandboxUI:
+    """Marks UI elements of the sandbox panel, destroyed when it changes."""
+
+
+@dataclass(slots=True)
 class PerkHudRow:
     """Marks a UILabel listing one perk path's stars (or a fusion), top left."""
 

@@ -8,14 +8,21 @@ from game.resources.run_stats import RunStats
 from game.util.roman import to_roman
 
 PLAY_ACTION = "play"
-"""Action of the Play button on both screens. Starts a new run."""
+"""Action of the Play button on both screens. Starts a new run (on game over,
+in the mode that just ended)."""
+SANDBOX_ACTION = "sandbox"
+"""Action of the main menu's Sandbox button: the map with no waves, enemies
+spawned on demand."""
+MENU_ACTION = "main_menu"
+"""Action of the game over screen's Main Menu button."""
 
 SCREEN_LAYER = 50
 PLAY_BUTTON_SIZE = (200, 56)
+SMALL_BUTTON_SIZE = (200, 40)
 
 OVERLAY_COLOR = (0, 0, 0)
 OVERLAY_ALPHA = 140
-PANEL_SIZE = (360, 360)
+PANEL_SIZE = (360, 420)
 PANEL_COLOR = (35, 35, 45)
 PANEL_ALPHA = 235
 TITLE_COLOR = (230, 70, 70)
@@ -33,19 +40,22 @@ def _centered(world: World, *components, y: float, size, layer: int):
     )
 
 
-def _play_button(world: World, y: float):
+def _button(
+    world: World, action: str, text: str, y: float, size=PLAY_BUTTON_SIZE, font=34
+):
     _centered(
         world,
-        UIButton(PLAY_ACTION),
-        UILabel("Play", 34),
+        UIButton(action),
+        UILabel(text, font),
         y=y,
-        size=PLAY_BUTTON_SIZE,
+        size=size,
         layer=SCREEN_LAYER + 2,
     )
 
 
 def build_main_menu(world: World):
-    _play_button(world, 0)
+    _button(world, PLAY_ACTION, "Play", 0)
+    _button(world, SANDBOX_ACTION, "Sandbox", 70)
 
 
 def format_time(seconds: float):
@@ -81,12 +91,13 @@ def build_game_over(world: World, stats: RunStats, cash_gained: int):
             layer=SCREEN_LAYER + 2,
         )
 
-    line("You Died", -140, 44, TITLE_COLOR)
+    line("You Died", -160, 44, TITLE_COLOR)
     wave = to_roman(stats.wave) if stats.wave > 0 else "-"
-    line(f"Wave Reached: {wave}", -90)
-    line(f"Enemies Killed: {stats.enemies_killed}", -58)
-    line(f"Mystery Boxes Opened: {stats.boxes_opened}", -26)
-    line(f"Time Survived: {format_time(stats.time_survived)}", 6)
-    line(f"Total Cash Gained: ${cash_gained}", 38)
+    line(f"Wave Reached: {wave}", -110)
+    line(f"Enemies Killed: {stats.enemies_killed}", -78)
+    line(f"Mystery Boxes Opened: {stats.boxes_opened}", -46)
+    line(f"Time Survived: {format_time(stats.time_survived)}", -14)
+    line(f"Total Cash Gained: ${cash_gained}", 18)
 
-    _play_button(world, 115)
+    _button(world, PLAY_ACTION, "Play", 95)
+    _button(world, MENU_ACTION, "Main Menu", 160, SMALL_BUTTON_SIZE, 26)
